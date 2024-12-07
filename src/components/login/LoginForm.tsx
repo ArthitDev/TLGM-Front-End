@@ -25,6 +25,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
+      toast.dismiss();
       toast.success('เข้าสู่ระบบสำเร็จ');
       sessionStorage.setItem('userData', JSON.stringify(data.user));
       if (data.user.role === 0) {
@@ -34,11 +35,13 @@ const LoginForm: React.FC<LoginFormProps> = () => {
       }
     },
     onError: () => {
+      toast.dismiss();
       toast.error('เข้าสู่ระบบล้มเหลว');
     },
   });
 
   const onSubmit = handleSubmit((data) => {
+    toast.loading('กำลังเข้าสู่ระบบ...');
     loginMutation.mutate(data);
   });
 
@@ -49,13 +52,13 @@ const LoginForm: React.FC<LoginFormProps> = () => {
       <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-xl w-full max-w-[420px]">
         <div className="flex justify-center mb-4 sm:mb-8">
           <Image
-            width={150}
-            height={150}
             src="/images/logo.png"
+            width={300}
+            height={100}
             alt="Logo"
-            className="h-16 sm:h-24 w-auto"
             quality={100}
             priority
+            className="w-full h-auto"
           />
         </div>
 
@@ -180,9 +183,35 @@ const LoginForm: React.FC<LoginFormProps> = () => {
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full py-2.5 sm:py-3 rounded-lg text-white font-semibold transition-all duration-200 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 transform hover:-translate-y-0.5 disabled:opacity-70"
+            className="w-full py-2.5 sm:py-3 rounded-lg text-white font-semibold transition-all duration-200 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 transform hover:-translate-y-0.5 disabled:opacity-70 flex items-center justify-center"
           >
-            {loginMutation.isPending ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+            {loginMutation.isPending ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                กำลังเข้าสู่ระบบ...
+              </>
+            ) : (
+              'เข้าสู่ระบบ'
+            )}
           </button>
         </form>
       </div>

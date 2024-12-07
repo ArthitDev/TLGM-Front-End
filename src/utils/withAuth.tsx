@@ -4,14 +4,21 @@ import React, { useEffect } from 'react';
 
 import axiosInstance from '@/services/axiosInstance';
 
-const withAuth = (WrappedComponent: React.ComponentType) => {
+const withAuth = (
+  WrappedComponent: React.ComponentType,
+  role: 'admin' | 'user' = 'user'
+) => {
   const Wrapper: React.FC = (props) => {
     const router = useRouter();
     const { isAuthenticated, setIsAuthenticated } = useAuth();
 
     const checkAuth = async () => {
       try {
-        await axiosInstance.get('/api/v1/admin');
+        if (role === 'admin') {
+          await axiosInstance.get('/api/v1/admin');
+        } else {
+          await axiosInstance.get('/api/v1/user');
+        }
         setIsAuthenticated(true);
       } catch (err) {
         setIsAuthenticated(false);

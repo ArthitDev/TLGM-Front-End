@@ -1,10 +1,14 @@
 const pageTitles: { [key: string]: string } = {
   '/': 'TLGM Message',
   '/login': 'TLGM Message |  Login',
-  '/admin': 'TLGM Message | Admin',
+  '/admin': 'TLGM Message | Admin Homepage',
   '/admin/dashboard': 'TLGM Message | Admin Dashboard',
-  '/user': 'TLGM Message | User',
+  '/admin/confirm': 'TLGM Message | Admin Confirm',
+  '/admin/settings': 'TLGM Message | Admin Settings',
+  '/user': 'TLGM Message | User Homepage',
   '/user/dashboard': 'TLGM Message | User Dashboard',
+  '/user/confirm': 'TLGM Message | User Confirm',
+  '/user/settings': 'TLGM Message | User Settings',
 };
 
 export default pageTitles;
