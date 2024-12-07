@@ -1,5 +1,7 @@
 import './globals.css';
+import '@/styles/UserSidebar.style.css';
 
+// ... other imports ...
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { AuthProvider } from 'context/AuthContext';
