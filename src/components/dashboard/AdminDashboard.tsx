@@ -8,4 +8,4 @@ const Dashboard: React.FC<DashboardProps> = () => {
   return <div>Dashboard</div>;
 };
 
-export default withAuth(Dashboard);
+export default withAuth(Dashboard, 'admin');

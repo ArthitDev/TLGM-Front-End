@@ -30,7 +30,7 @@ axiosInstance.interceptors.response.use(
       error.response.data.message === 'Access token missing, refresh required'
     ) {
       try {
-        const response = await axiosInstance.post('/refresh-token'); // แก้ไขให้เรียกใช้งาน refreshToken endpoint
+        const response = await axiosInstance.post('/api/v1/refresh-token'); // แก้ไขให้เรียกใช้งาน refreshToken endpoint
         const newAccessToken = response.data.accessToken;
 
         axiosInstance.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;

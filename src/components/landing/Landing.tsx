@@ -24,6 +24,7 @@ const LandingPage: React.FC<LandingPageProps> = () => {
           alt="Logo"
           fill
           priority
+          sizes="(max-width: 768px) 100vw, 14rem"
           className="object-contain"
         />
       </div>

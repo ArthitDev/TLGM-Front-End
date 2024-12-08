@@ -6,4 +6,4 @@ const UserDashboard = () => {
   return <div>UserDashboard</div>;
 };
 
-export default withAuth(UserDashboard);
+export default withAuth(UserDashboard, 'user');
