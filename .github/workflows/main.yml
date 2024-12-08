@@ -43,5 +43,5 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./  # เอาทุกไฟล์และทุกโฟลเดอร์จากโฟลเดอร์ปัจจุบัน
+          local-dir: ./.next 
           server-dir: tlgm-website.xyz/
