@@ -9,7 +9,7 @@ const UserLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex">
       <UserSidebar />
-      <div className="">{children}</div>
+      <div className="flex-grow p-6">{children}</div>
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import {
+  ArrowLeftIcon,
   ArrowLeftStartOnRectangleIcon,
+  ArrowRightIcon,
   Bars3Icon,
   ChartBarIcon,
   CheckBadgeIcon,
@@ -21,11 +23,9 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'หน้าหลัก', icon: HomeIcon, path: '/user' },
   { name: 'แดชบอร์ด', icon: ChartBarIcon, path: '/user/dashboard' },
-  {
-    name: 'ยืนยัน Telegram',
-    icon: CheckBadgeIcon,
-    path: '/user/confirm',
-  },
+  { name: 'ยืนยัน Telegram', icon: CheckBadgeIcon, path: '/user/confirm' },
+  { name: 'กลุ่มต้นทาง', icon: ArrowRightIcon, path: '/user/sandinggroup' },
+  { name: 'กลุ่มปลายทาง', icon: ArrowLeftIcon, path: '/user/resivegroup' },
 ];
 
 const UserSidebar = () => {
@@ -62,7 +62,7 @@ const UserSidebar = () => {
     <>
       {/* Mobile Menu Button */}
       <button
-        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-800 text-white sm:hidden"
+        className="sidebar-toggle p-2 rounded-lg bg-gray-800 text-white sm:hidden"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         {isMobileMenuOpen ? (
