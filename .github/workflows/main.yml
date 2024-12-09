@@ -11,37 +11,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the latest code from main branch
       - name: 🚚 Get latest code
-        uses: actions/checkout@v4  # Updated to v4
+        uses: actions/checkout@v4
 
-      - name: Use Node.js 20.17.0
+      # Step 2: Setup Node.js 20.17.0 environment
+      - name: 📦 Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.17.0' 
+          node-version: '20.17.0'
+          cache: 'npm' # Automatically cache node_modules if detected
 
-      - name: Cache npm dependencies
+      # Step 3: Cache dependencies to avoid re-installation
+      - name: 📁 Cache npm dependencies
         uses: actions/cache@v3
         id: cache-node-modules
         with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: |
+            **/node_modules
+            .next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
+      # Step 4: Install dependencies only if cache is not hit
       - name: 🔨 Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
-          npm install
+          echo "Installing dependencies..."
+          npm ci --no-audit --no-fund --prefer-offline --progress=false
         env:
          NODE_OPTIONS: "--max_old_space_size=4096"
-         CI: false
+         CI: true
 
+      # Step 5: Build the Next.js project
       - name: 🏗 Build Project
-        run: npm run build
+        run: |
+          echo "Building project..."
+          npm run build
 
+      # Step 6: Deploy files to the server using FTP
       - name: 📂 Sync all folders and files to the server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: .next/
-          server-dir: tlgm-website.xyz/
+          local-dir: .next/ # Ensure only build files are uploaded
+          server-dir: /tlgm-website.xyz/.next/ # Add root / to avoid accidental nested folders
+          dry-run: false # Set to true to test FTP deploy without actually uploading files
+          exclude: |
+            **/*.DS_Store
+            **/node_modules
+            **/README.md
+            **/.git*
+            **/.github/
+          log-level: verbose
