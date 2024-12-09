@@ -48,3 +48,8 @@ export const getChannels = async (apiId: string) => {
   const response = await axios.get(`${API_URL}/api/v1/channels/${apiId}`);
   return response.data;
 };
+
+export const stopClient = async (apiId: string) => {
+  const response = await axios.post(`${API_URL}/api/v1/stop/${apiId}`);
+  return response.data;
+};

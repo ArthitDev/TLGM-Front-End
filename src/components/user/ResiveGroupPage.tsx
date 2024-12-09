@@ -36,7 +36,6 @@ const ResiveGroupPage = () => {
       try {
         const profileData = await getUserProfile();
         setUserId(profileData.user.userid.toString());
-        toast.success('โหลดโปรไฟล์สำเร็จ');
       } catch (error) {
         toast.error('ไม่สามารถโหลดโปรไฟล์ได้');
       }
@@ -61,7 +60,7 @@ const ResiveGroupPage = () => {
           rgTid: group.rg_tid,
         }));
         setGroups(formattedGroups || []);
-        toast.success('โหลดข้อมูลกลุ่มสำเร็จ');
+        toast.success('โหลดข้อมูลกลุ่มปลายทางสำเร็จ');
       } catch (error) {
         toast.error('ไม่สามารถโหลดข้อมูลกลุ่มได้');
       }

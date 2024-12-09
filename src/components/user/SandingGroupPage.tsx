@@ -37,7 +37,6 @@ const SandingGroupPage = () => {
       try {
         const profileData = await getUserProfile();
         setUserId(profileData.user.userid.toString());
-        toast.success('โหลดโปรไฟล์สำเร็จ');
       } catch (error) {
         toast.error('ไม่สามารถโหลดโปรไฟล์ได้');
       }

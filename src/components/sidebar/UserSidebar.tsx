@@ -10,9 +10,11 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { logout } from '@/services/logoutServices';
+import { getUserProfile } from '@/services/profileService';
+import { UserProfileResponse } from '@/types/UserType';
 
 interface NavItem {
   name: string;
@@ -32,6 +34,26 @@ const UserSidebar = () => {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfileResponse | null>(
+    null
+  );
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Add useRef for the dropdown container
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+    fetchUserProfile();
+  }, []);
 
   const handleLogout = async () => {
     setShowLogoutModal(true);
@@ -58,89 +80,136 @@ const UserSidebar = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // สร้างฟังก์ชันสำหรับดึงตัวอักษรแรกของชือ
+  const getInitials = (name: string) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
+  };
+
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        className="sidebar-toggle p-2 rounded-lg bg-gray-800 text-white sm:hidden"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      >
-        {isMobileMenuOpen ? (
-          <XMarkIcon className="w-6 h-6" />
-        ) : (
-          <Bars3Icon className="w-6 h-6" />
-        )}
-      </button>
+      {/* Top Navigation Bar */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-40 flex items-center px-4">
+        {/* Mobile Toggle */}
+        <button
+          className="sm:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? (
+            <XMarkIcon className="w-6 h-6 text-white" />
+          ) : (
+            <Bars3Icon className="w-6 h-6 text-white" />
+          )}
+        </button>
 
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+        {/* เพิ่มปุ่มย่อ/ขยาย sidebar สำหรับหน้าจอ desktop */}
+        <button
+          className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ml-2"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <Bars3Icon className="w-6 h-6 text-white" />
+        </button>
 
-      {/* Sidebar */}
-      <div
-        className={`
-        fixed sm:static inset-y-0 left-0 z-40
-        transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        sm:translate-x-0 transition-transform duration-300 ease-in-out
-        bg-gray-800 text-white min-h-screen w-60 flex flex-col
-      `}
-      >
-        <div className="flex items-center justify-center py-4 cursor-pointer">
-          <img
-            src="/images/logo.png"
-            alt="User"
-            className="w-15 h-12"
-            onClick={() => router.push('/user')}
-          />
-        </div>
+        {/* Logo */}
+        <img src="/images/logo.png" alt="Logo" className="h-8 ml-2 sm:ml-0" />
 
-        {/* Main Menu */}
-        <div className="flex-1 flex flex-col overflow-y-auto px-3 py-4">
-          <nav>
-            <div className="space-y-1" aria-label="Main navigation">
-              {navigation.map((item) => (
-                <div
-                  key={item.name}
-                  className="flex items-center space-x-2 px-3 py-2 rounded hover:bg-gray-700 cursor-pointer transition-colors duration-200 active:bg-gray-600"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    router.push(item.path);
-                  }}
-                >
-                  <item.icon
-                    className="w-5 h-5 flex-shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span className="text-sm font-medium">{item.name}</span>
+        {/* Updated Right Side Items with Dropdown */}
+        <div className="ml-auto flex items-center gap-4 absolute right-5">
+          <div className="relative" ref={dropdownRef}>
+            <button
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            >
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white">
+                {getInitials(userProfile?.user.name || '')}
+              </div>
+              <span className="hidden sm:inline text-sm font-medium text-white">
+                {userProfile?.user.name || 'Loading...'}
+              </span>
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {showProfileDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="py-1">
+                  <button
+                    className="w-full flex items-center px-4 py-2 text-sm text-white dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => {
+                      router.push('/user/settings');
+                      setShowProfileDropdown(false);
+                    }}
+                  >
+                    <Cog6ToothIcon className="w-5 h-5 mr-2" />
+                    ตั้งค่า
+                  </button>
+                  <button
+                    className="w-full flex items-center px-4 py-2 text-sm text-white hover:bg-red-50 dark:hover:bg-red-900/20"
+                    onClick={() => {
+                      handleLogout();
+                      setShowProfileDropdown(false);
+                    }}
+                  >
+                    <ArrowLeftStartOnRectangleIcon className="w-5 h-5 mr-2" />
+                    ออกจากระบบ
+                  </button>
                 </div>
-              ))}
-            </div>
-          </nav>
-        </div>
-
-        {/* User Profile */}
-        <div className="border-t border-gray-700 p-3 mt-auto">
-          <div className="flex justify-center space-x-4">
-            <button
-              className="p-2 rounded-lg hover:bg-gray-700 transition-colors duration-200"
-              onClick={() => router.push('/user/settings')}
-            >
-              <Cog6ToothIcon className="w-6 h-6" aria-hidden="true" />
-            </button>
-            <button
-              className="p-2 rounded-lg hover:bg-gray-700 transition-colors duration-200"
-              onClick={handleLogout}
-            >
-              <ArrowLeftStartOnRectangleIcon
-                className="w-6 h-6"
-                aria-hidden="true"
-              />
-            </button>
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Main Sidebar - ปรับ width ตาม state isCollapsed */}
+      <div
+        className={`
+          fixed sm:static inset-y-0 left-0 z-30
+          transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          sm:translate-x-0 transition-all duration-300 ease-in-out
+          bg-white dark:bg-gray-800 text-gray-700 dark:text-white 
+          h-[calc(100vh-64px)] ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col
+          border-r border-gray-200 dark:border-gray-700
+          mt-16 sm:mt-16
+          overflow-hidden
+        `}
+      >
+        {/* ปรับ Navigation Menu ให้รองรับการย่อ/ขยาย */}
+        <nav className="flex-1 py-4 overflow-auto">
+          {navigation.map((item) => (
+            <div
+              key={item.name}
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                router.push(item.path);
+              }}
+              className={`
+                flex items-center px-4 py-2 text-sm
+                ${
+                  router.pathname === item.path
+                    ? 'bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                }
+                cursor-pointer transition-colors duration-200
+              `}
+            >
+              <item.icon className="w-5 h-5 mr-3" aria-hidden="true" />
+              {!isCollapsed && item.name}
+            </div>
+          ))}
+        </nav>
       </div>
 
       {/* Logout Modal */}
