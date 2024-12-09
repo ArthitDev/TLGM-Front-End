@@ -20,9 +20,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.17.0'
-          cache: 'npm' # Automatically cache node_modules if detected
+          cache: 'npm'
 
-      # Step 3: Cache dependencies to avoid re-installation
+      # Step 3: Cache dependencies
       - name: 📁 Cache npm dependencies
         uses: actions/cache@v3
         id: cache-node-modules
@@ -34,32 +34,37 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # Step 4: Install dependencies only if cache is not hit
+      # Step 4: Install dependencies
       - name: 🔨 Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
           echo "Installing dependencies..."
           npm ci --no-audit --no-fund --prefer-offline --progress=false
         env:
-         NODE_OPTIONS: "--max_old_space_size=4096"
-         CI: true
+          NODE_OPTIONS: "--max_old_space_size=4096"
+          CI: true
 
-      # Step 5: Build the Next.js project
+      # Step 5: Create .env file from GitHub Secrets
+      - name: 📄 Create .env.production file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENTS }}" > .env.production
+
+      # Step 6: Build the Next.js project
       - name: 🏗 Build Project
         run: |
           echo "Building project..."
           npm run build
 
-      # Step 6: Deploy files to the server using FTP
+      # Step 7: Deploy files to the server using FTP
       - name: 📂 Sync all folders and files to the server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: .next/ # Ensure only build files are uploaded
-          server-dir: /tlgm-website.xyz/.next/ # Add root / to avoid accidental nested folders
-          dry-run: false # Set to true to test FTP deploy without actually uploading files
+          local-dir: .next/
+          server-dir: /tlgm-website.xyz/.next/
+          dry-run: false
           exclude: |
             **/*.DS_Store
             **/node_modules
