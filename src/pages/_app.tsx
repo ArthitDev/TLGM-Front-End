@@ -1,4 +1,5 @@
 import './globals.css';
+import '../styles/UserSidebar.styles.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';

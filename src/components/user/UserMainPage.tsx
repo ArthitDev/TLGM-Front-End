@@ -29,6 +29,7 @@ const UserMainPage = () => {
           <p>Username: {profileData.user.username}</p>
           <p>Name: {profileData.user.name}</p>
           <p>Role: {profileData.user.role}</p>
+          <p>api_ID: {profileData.user.api_id}</p>
         </div>
       )}
       <button onClick={handleLogout}>Logout</button>

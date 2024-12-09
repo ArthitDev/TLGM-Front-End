@@ -11,6 +11,7 @@ interface UserProfileResponse {
     api_id: number;
     api_hash: string;
     role: number;
+    telegram_auth: number;
   };
 }
 
@@ -23,6 +24,7 @@ interface AdminProfileResponse {
     api_id: number;
     api_hash: string;
     role: number;
+    telegram_auth: number;
   };
 }
 
