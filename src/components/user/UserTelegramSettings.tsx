@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { FaCheck, FaPaperPlane, FaPlay, FaStop } from 'react-icons/fa';
 
 import { getUserProfile } from '@/services/profileService';
-import { sendPhone, startClient, verifyCode } from '@/services/tlg_confrm';
+import {
+  sendPhone,
+  startClient,
+  stopClient,
+  verifyCode,
+} from '@/services/tlg_confrm';
 
 const UserTelegramSettings = () => {
   const [step, setStep] = useState(0); // Step 0: API Info, 1: Phone, 2: OTP
   const [phoneCodeHash, setPhoneCodeHash] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isClientStarted, setIsClientStarted] = useState(false);
 
   const methods = useForm({
     defaultValues: {
@@ -35,7 +42,6 @@ const UserTelegramSettings = () => {
     formState: { errors },
   } = methods;
 
-  // ดึงข้อมูล `apiId` และ `apiHash` จาก `getUserProfile`
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -44,9 +50,8 @@ const UserTelegramSettings = () => {
         setValue('apiHash', profileData.user.api_hash);
         setValue('phoneNumber', profileData.user.phone);
         setValue('userid', profileData.user.userid.toString()); // เพิ่ม userid
-        toast.success('Loaded API information.');
       } catch (error) {
-        toast.error('Failed to load API information.');
+        toast.error('ไม่สามารถโริ่มการทำงานของ Client ได้');
       }
     };
 
@@ -55,12 +60,18 @@ const UserTelegramSettings = () => {
 
   // Step 0: เริ่มต้น Client
   const handleStartClient = async (data: FormData) => {
+    const loadingToast = toast.loading('กำลังเริ่มการทำงานของ Client...');
     try {
       await startClient(data.apiId, data.apiHash);
-      toast.success('Client started successfully!');
+      toast.dismiss(loadingToast);
+      toast.success('เริ่มการทำงานของ Client สำเร็จ');
+      setIsClientStarted(true);
       setStep(1); // ไปที่ขั้นตอนถัดไป
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to start client');
+      toast.dismiss(loadingToast);
+      toast.error(
+        error.response?.data?.error || 'ไม่สามารถเริ่มการทำงานของ Client ได้'
+      );
     }
   };
 
@@ -110,24 +121,120 @@ const UserTelegramSettings = () => {
   };
 
   const getButtonLabel = () => {
-    if (step === 0) return 'Start Client';
-    if (step === 1) return 'Send OTP';
-    if (step === 2) return 'Verify OTP';
+    if (step === 0)
+      return (
+        <>
+          <FaPlay className="mr-2" /> เริ่มการทำงาน
+        </>
+      );
+    if (step === 1)
+      return (
+        <>
+          <FaPaperPlane className="mr-2" /> ส่ง OTP
+        </>
+      );
+    if (step === 2)
+      return (
+        <>
+          <FaCheck className="mr-2" /> ยืนยัน OTP
+        </>
+      );
     return '';
+  };
+
+  // เพิ่ม component Stepper
+  const renderStepper = () => {
+    const steps = [
+      { label: 'เริ่มต้น Client', icon: <FaPlay /> },
+      { label: 'ยืนยันเบอร์โทรศัพท์', icon: <FaPaperPlane /> },
+      { label: 'ยืนยัน OTP', icon: <FaCheck /> },
+    ];
+
+    return (
+      <div className="mb-8">
+        <div className="flex justify-center items-center">
+          {steps.map((s, index) => (
+            <React.Fragment key={index}>
+              <div className="flex flex-col items-center relative">
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transform transition-all duration-300 ease-in-out ${
+                    step >= index
+                      ? 'bg-indigo-600 text-white scale-110 shadow-lg'
+                      : 'bg-gray-100 text-gray-400 scale-100'
+                  }`}
+                >
+                  <div
+                    className={`text-lg transition-transform duration-300 ${
+                      step >= index ? 'scale-110' : 'scale-100'
+                    }`}
+                  >
+                    {s.icon}
+                  </div>
+                </div>
+                <span
+                  className={`text-sm mt-3 font-medium transition-all duration-300 ${
+                    step >= index
+                      ? 'text-indigo-600 transform translate-y-0 opacity-100'
+                      : 'text-gray-400 transform -translate-y-1 opacity-70'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className="flex-1 mx-4 flex items-center">
+                  <div className="h-1 w-full relative">
+                    <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
+                    <div
+                      className={`absolute inset-0 bg-indigo-600 rounded-full transition-all duration-500 ease-out ${
+                        step > index ? 'w-full' : 'w-0'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Add new handler for stopping client
+  const handleStopClient = async () => {
+    const formData = methods.getValues();
+    console.log('Stop Client apiId:', formData.apiId);
+    const loadingToast = toast.loading('กำลังหยุดการทำงานของ Client...');
+    try {
+      await stopClient(formData.apiId);
+      toast.dismiss(loadingToast);
+      toast.success('หยุดการทำงานของ Client สำเร็จ');
+      setIsClientStarted(false);
+      setStep(0);
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      toast.error(
+        error.response?.data?.error || 'ไม่สามารถหยุดการทำงานของ Client ได้'
+      );
+    }
   };
 
   return (
     <FormProvider {...methods}>
-      <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded-md">
+      <div className="w-full p-6 bg-white shadow-md rounded-md">
+        <h2 className="text-3xl font-semibold text-gray-800 mb-10 text-center">
+          เริ่มการทำงานของ Telegram Client
+        </h2>
+        {renderStepper()}
         <form onSubmit={handleSubmit(handleStepSubmit)}>
           {step === 0 && (
-            <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="mb-4">
                 <label
                   htmlFor="apiId"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  API ID:
+                  API ID
                 </label>
                 <input
                   {...register('apiId', { required: 'API ID is required' })}
@@ -145,12 +252,10 @@ const UserTelegramSettings = () => {
                   htmlFor="apiHash"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  API Hash:
+                  API Hash
                 </label>
                 <input
-                  {...register('apiHash', {
-                    required: 'API Hash is required',
-                  })}
+                  {...register('apiHash', { required: 'API Hash is required' })}
                   id="apiHash"
                   type="text"
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -162,7 +267,7 @@ const UserTelegramSettings = () => {
                   </p>
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {step === 1 && (
@@ -209,17 +314,56 @@ const UserTelegramSettings = () => {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
-              isLoading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-          >
-            {isLoading ? 'Processing...' : getButtonLabel()}
-          </button>
+          <div className="flex justify-center gap-4">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`mt-4 w-full md:w-auto md:min-w-[200px] inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                isLoading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  กำลังเริ่มการทำงาน....
+                </>
+              ) : (
+                getButtonLabel()
+              )}
+            </button>
+
+            {/* Add Stop Button */}
+            {isClientStarted && (
+              <button
+                type="button"
+                onClick={handleStopClient}
+                className="mt-4 w-full md:w-auto md:min-w-[200px] inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                <FaStop className="mr-2" /> หยุดการทำงาน
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </FormProvider>
