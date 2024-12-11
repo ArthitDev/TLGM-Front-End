@@ -7,6 +7,7 @@ import {
   CheckBadgeIcon,
   Cog6ToothIcon,
   HomeIcon,
+  PaperAirplaneIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/router';
@@ -26,6 +27,7 @@ const navigation: NavItem[] = [
   { name: 'ยืนยัน Telegram', icon: CheckBadgeIcon, path: '/user/confirm' },
   { name: 'กลุ่มต้นทาง', icon: ArrowRightIcon, path: '/user/sandinggroup' },
   { name: 'กลุ่มปลายทาง', icon: ArrowLeftIcon, path: '/user/resivegroup' },
+  { name: 'Forward', icon: PaperAirplaneIcon, path: '/user/forward' },
 ];
 
 const UserSidebar = () => {

@@ -29,11 +29,11 @@ interface AdminProfileResponse {
 }
 
 export const getUserProfile = async (): Promise<UserProfileResponse> => {
-  const response = await axios.get(`${API_URL}/api/v1/UserProfile`);
+  const response = await axios.get(`${API_URL}/api/v1/userProfile`);
   return response.data;
 };
 
 export const getAdminProfiles = async (): Promise<AdminProfileResponse> => {
-  const response = await axios.get(`${API_URL}/api/v1/AdminProfile`);
+  const response = await axios.get(`${API_URL}/api/v1/adminProfile`);
   return response.data;
 };
