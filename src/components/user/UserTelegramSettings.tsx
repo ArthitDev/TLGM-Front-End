@@ -15,7 +15,12 @@ const UserTelegramSettings = () => {
   const [step, setStep] = useState(0); // Step 0: API Info, 1: Phone, 2: OTP
   const [phoneCodeHash, setPhoneCodeHash] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isClientStarted, setIsClientStarted] = useState(false);
+  const [, setIsClientStarted] = useState(false);
+  const [, setIsAuthenticated] = useState(false);
+  const [activeApiId, setActiveApiId] = useState(() => {
+    return localStorage.getItem('activeApiId') || '';
+  });
+  const [userProfile, setUserProfile] = useState<any>(null); // Add state to store user profile
 
   const methods = useForm({
     defaultValues: {
@@ -24,6 +29,7 @@ const UserTelegramSettings = () => {
       phoneNumber: '',
       otpCode: '',
       userid: '',
+      telegram_auth: 0,
     },
   });
 
@@ -33,6 +39,7 @@ const UserTelegramSettings = () => {
     phoneNumber: string;
     otpCode: string;
     userid: string; // เพิ่ม userid
+    telegram_auth: number;
   };
 
   const {
@@ -46,12 +53,22 @@ const UserTelegramSettings = () => {
     const fetchProfileData = async () => {
       try {
         const profileData = await getUserProfile();
+        setUserProfile(profileData.user);
         setValue('apiId', profileData.user.api_id.toString());
         setValue('apiHash', profileData.user.api_hash);
         setValue('phoneNumber', profileData.user.phone);
-        setValue('userid', profileData.user.userid.toString()); // เพิ่ม userid
+        setValue('userid', profileData.user.userid.toString());
+        setValue('telegram_auth', profileData.user.telegram_auth);
+
+        const isAuth = profileData.user.telegram_auth === 1;
+        setIsAuthenticated(isAuth);
+        setIsClientStarted(isAuth);
+
+        if (isAuth) {
+          setActiveApiId(profileData.user.api_id.toString());
+        }
       } catch (error) {
-        toast.error('ไม่สามารถโริ่มการทำงานของ Client ได้');
+        toast.error('ไม่สามารถดึงข้อมูล Profile ได้');
       }
     };
 
@@ -63,10 +80,16 @@ const UserTelegramSettings = () => {
     const loadingToast = toast.loading('กำลังเริ่มการทำงานของ Client...');
     try {
       await startClient(data.apiId, data.apiHash);
+      // Fetch updated profile after starting client
+      const profileData = await getUserProfile();
+      setUserProfile(profileData.user);
+      setValue('telegram_auth', profileData.user.telegram_auth);
+
       toast.dismiss(loadingToast);
       toast.success('เริ่มการทำงานของ Client สำเร็จ');
       setIsClientStarted(true);
-      setStep(1); // ไปที่ขั้นตอนถัดไป
+      setActiveApiId(data.apiId);
+      setStep(1);
     } catch (error: any) {
       toast.dismiss(loadingToast);
       toast.error(
@@ -95,9 +118,16 @@ const UserTelegramSettings = () => {
         data.phoneNumber,
         data.otpCode,
         phoneCodeHash,
-        data.userid // ส่ง userid ไปด้วย
+        data.userid
       );
+      // Fetch updated profile after verification
+      const profileData = await getUserProfile();
+      setUserProfile(profileData.user);
+      setValue('telegram_auth', profileData.user.telegram_auth);
+
       toast.success('Login successful!');
+      setIsClientStarted(true);
+      setIsAuthenticated(true);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to verify OTP');
     }
@@ -200,17 +230,30 @@ const UserTelegramSettings = () => {
     );
   };
 
-  // Add new handler for stopping client
+  // Modify handleStopClient to use userProfile
+  // ... existing code ...
   const handleStopClient = async () => {
-    const formData = methods.getValues();
-    console.log('Stop Client apiId:', formData.apiId);
     const loadingToast = toast.loading('กำลังหยุดการทำงานของ Client...');
     try {
-      await stopClient(formData.apiId);
-      toast.dismiss(loadingToast);
-      toast.success('หยุดการทำงานของ Client สำเร็จ');
-      setIsClientStarted(false);
-      setStep(0);
+      if (userProfile) {
+        await stopClient(
+          userProfile.api_id.toString(),
+          userProfile.userid.toString()
+        );
+        // Fetch updated profile after stopping client
+        const profileData = await getUserProfile();
+        setUserProfile(profileData.user);
+        setValue('telegram_auth', profileData.user.telegram_auth);
+
+        toast.dismiss(loadingToast);
+        toast.success('หยุดการทำงานของ Client สำเร็จ');
+        setIsClientStarted(false);
+        setIsAuthenticated(false);
+        setActiveApiId('');
+        setStep(0);
+      } else {
+        throw new Error('User profile data is not available');
+      }
     } catch (error: any) {
       toast.dismiss(loadingToast);
       toast.error(
@@ -218,143 +261,178 @@ const UserTelegramSettings = () => {
       );
     }
   };
+  // ... existing code ...
+
+  // Add new component to show working status
+  const renderWorkingStatus = () => {
+    return (
+      <div className="mb-8 p-6 bg-green-50 rounded-lg border-2 border-green-200">
+        <div className="flex items-center justify-center space-x-3 mb-4">
+          <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+          <h3 className="text-xl font-semibold text-green-700">
+            Telegram Client กำลังทำงาน
+          </h3>
+        </div>
+        <p className="text-center text-green-600">
+          API ID: {activeApiId} พร้อมใช้งาน
+        </p>
+      </div>
+    );
+  };
 
   return (
     <FormProvider {...methods}>
-      <div className="w-full p-6 bg-white shadow-md rounded-md">
-        <h2 className="text-3xl font-semibold text-gray-800 mb-10 text-center">
-          เริ่มการทำงานของ Telegram Client
-        </h2>
-        {renderStepper()}
-        <form onSubmit={handleSubmit(handleStepSubmit)}>
-          {step === 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="mb-4">
-                <label
-                  htmlFor="apiId"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  API ID
-                </label>
-                <input
-                  {...register('apiId', { required: 'API ID is required' })}
-                  id="apiId"
-                  type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  readOnly
-                />
-                {errors.apiId && (
-                  <p className="text-red-500 text-sm">{errors.apiId.message}</p>
-                )}
-              </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="apiHash"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  API Hash
-                </label>
-                <input
-                  {...register('apiHash', { required: 'API Hash is required' })}
-                  id="apiHash"
-                  type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  readOnly
-                />
-                {errors.apiHash && (
-                  <p className="text-red-500 text-sm">
-                    {errors.apiHash.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+      <div className="space-y-6">
+        <div className="w-full p-6 bg-white shadow-md rounded-md">
+          <h2 className="text-3xl font-semibold text-gray-800 mb-10 text-center">
+            เริ่มการทำงานของ Telegram Client
+          </h2>
 
-          {step === 1 && (
-            <div className="mb-4">
-              <label
-                htmlFor="phoneNumber"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Phone Number:
-              </label>
-              <input
-                {...register('phoneNumber', {
-                  required: 'Phone number is required',
-                })}
-                id="phoneNumber"
-                type="tel"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-              {errors.phoneNumber && (
-                <p className="text-red-500 text-sm">
-                  {errors.phoneNumber.message}
-                </p>
+          {/* แสดง working status เมื่อ telegram_auth เป็น 1 */}
+          {userProfile?.telegram_auth === 1
+            ? renderWorkingStatus()
+            : renderStepper()}
+
+          {/* แสดงฟอร์มเมื่อ telegram_auth เป็น 0 */}
+          {userProfile?.telegram_auth === 0 && (
+            <form onSubmit={handleSubmit(handleStepSubmit)}>
+              {step === 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="mb-4">
+                    <label
+                      htmlFor="apiId"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      API ID
+                    </label>
+                    <input
+                      {...register('apiId', { required: 'API ID is required' })}
+                      id="apiId"
+                      type="text"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                    {errors.apiId && (
+                      <p className="text-red-500 text-sm">
+                        {errors.apiId.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <label
+                      htmlFor="apiHash"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      API Hash
+                    </label>
+                    <input
+                      {...register('apiHash', {
+                        required: 'API Hash is required',
+                      })}
+                      id="apiHash"
+                      type="text"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                    {errors.apiHash && (
+                      <p className="text-red-500 text-sm">
+                        {errors.apiHash.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
-          )}
 
-          {step === 2 && (
-            <div className="mb-4">
-              <label
-                htmlFor="otpCode"
-                className="block text-sm font-medium text-gray-700"
-              >
-                OTP Code:
-              </label>
-              <input
-                {...register('otpCode', { required: 'OTP Code is required' })}
-                id="otpCode"
-                type="text"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-              {errors.otpCode && (
-                <p className="text-red-500 text-sm">{errors.otpCode.message}</p>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-center gap-4">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`mt-4 w-full md:w-auto md:min-w-[200px] inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
-                isLoading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-            >
-              {isLoading ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
+              {step === 1 && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="phoneNumber"
+                    className="block text-sm font-medium text-gray-700"
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  กำลังเริ่มการทำงาน....
-                </>
-              ) : (
-                getButtonLabel()
+                    Phone Number:
+                  </label>
+                  <input
+                    {...register('phoneNumber', {
+                      required: 'Phone number is required',
+                    })}
+                    id="phoneNumber"
+                    type="tel"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-red-500 text-sm">
+                      {errors.phoneNumber.message}
+                    </p>
+                  )}
+                </div>
               )}
-            </button>
 
-            {/* Add Stop Button */}
-            {isClientStarted && (
+              {step === 2 && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="otpCode"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    OTP Code:
+                  </label>
+                  <input
+                    {...register('otpCode', {
+                      required: 'OTP Code is required',
+                    })}
+                    id="otpCode"
+                    type="text"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                  {errors.otpCode && (
+                    <p className="text-red-500 text-sm">
+                      {errors.otpCode.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            </form>
+          )}
+
+          {/* ปรับปรุงการแสดงปุ่ม */}
+          <div className="flex justify-center gap-4">
+            {userProfile?.telegram_auth === 0 ? (
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`mt-4 w-full md:w-auto md:min-w-[200px] inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                  isLoading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+                onClick={handleSubmit(handleStepSubmit)}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    กำลังเริ่มการทำงาน....
+                  </>
+                ) : (
+                  getButtonLabel()
+                )}
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={handleStopClient}
@@ -364,7 +442,7 @@ const UserTelegramSettings = () => {
               </button>
             )}
           </div>
-        </form>
+        </div>
       </div>
     </FormProvider>
   );

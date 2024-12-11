@@ -22,7 +22,7 @@ const UserSettings: React.FC<UserSettingsProps> = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // เพิ่มโค้ดสำหรับการส่งข้อมูลฟอร์ม
-    console.log(formData);
+    // console.log(formData);
   };
 
   return (

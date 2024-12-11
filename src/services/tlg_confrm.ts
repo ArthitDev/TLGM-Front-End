@@ -49,7 +49,9 @@ export const getChannels = async (apiId: string) => {
   return response.data;
 };
 
-export const stopClient = async (apiId: string) => {
-  const response = await axios.post(`${API_URL}/api/v1/stop/${apiId}`);
+export const stopClient = async (apiId: string, userid: string) => {
+  const response = await axios.put(`${API_URL}/api/v1/stop/${apiId}`, {
+    userid,
+  });
   return response.data;
 };

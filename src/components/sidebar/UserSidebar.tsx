@@ -49,7 +49,7 @@ const UserSidebar = () => {
         const profile = await getUserProfile();
         setUserProfile(profile);
       } catch (error) {
-        console.error('Failed to fetch user profile:', error);
+        // console.error('Failed to fetch user profile:', error);
       }
     };
     fetchUserProfile();
@@ -144,7 +144,7 @@ const UserSidebar = () => {
 
             {/* Profile Dropdown Menu */}
             {showProfileDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+              <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
                 <div className="py-1">
                   <button
                     className="w-full flex items-center px-4 py-2 text-sm text-white dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -157,7 +157,7 @@ const UserSidebar = () => {
                     ตั้งค่า
                   </button>
                   <button
-                    className="w-full flex items-center px-4 py-2 text-sm text-white hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="w-full flex items-center px-4 py-2 text-sm text-white dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => {
                       handleLogout();
                       setShowProfileDropdown(false);
