@@ -1,3 +1,5 @@
+/* eslint-disable no-nested-ternary */
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -23,96 +25,73 @@ interface Group {
 }
 
 const ResiveGroupPage = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [isFetchingChannels, setIsFetchingChannels] = useState(false);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
-  // ดึงข้อมูลโปรไฟล์ผู้ใช้
+  // Query user profile
+  const { data: profileData } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: getUserProfile,
+  });
+
+  const userId = profileData?.user.userid.toString();
+
+  // Query receiving groups
+  const { data: groups = [] } = useQuery({
+    queryKey: ['receivingGroups', userId],
+    queryFn: () => getGroupsFromDatabase(userId!),
+    enabled: !!userId,
+  });
+
+  // Query channels
+  const {
+    data: channelsData,
+    refetch: fetchChannels,
+    isFetching: isFetchingChannels,
+  } = useQuery({
+    queryKey: ['channels', userId],
+    queryFn: () => getChannels(userId!),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const channels = channelsData?.channels || [];
+
+  // Add group mutation
+  const addGroupMutation = useMutation({
+    mutationFn: (channel: Channel) =>
+      postGroupToDatabase(userId!, channel.title, channel.id),
+  });
+
+  // Delete group mutation
+  const deleteGroupMutation = useMutation({
+    mutationFn: () =>
+      deleteGroupFromDatabase(selectedGroup!.rgId.toString(), userId!),
+  });
+
+  // Handle mutations effects
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const profileData = await getUserProfile();
-        setUserId(profileData.user.userid.toString());
-      } catch (error) {
-        toast.error('ไม่สามารถโหลดโปรไฟล์ได้');
-      }
-    };
-    fetchUserProfile();
-  }, []);
-
-  // ดึงข้อมูลกลุ่ม
-  useEffect(() => {
-    const fetchGroups = async () => {
-      if (!userId) {
-        toast.error('ไม่พบรหัสผู้ใช้');
-        return;
-      }
-
-      try {
-        const data = await getGroupsFromDatabase(userId);
-        const formattedGroups = data.map((group: any) => ({
-          rgId: group.rg_id,
-          userId: group.userid,
-          rgName: group.rg_name,
-          rgTid: group.rg_tid,
-        }));
-        setGroups(formattedGroups || []);
-        toast.success('โหลดข้อมูลกลุ่มปลายทางสำเร็จ');
-      } catch (error) {
-        toast.error('ไม่สามารถโหลดข้อมูลกลุ่มได้');
-      }
-    };
-
-    if (userId) fetchGroups();
-  }, [userId]);
-
-  // ดึงข้อมูลช่องจาก API
-  const fetchChannels = async () => {
-    if (!userId) {
-      toast.error('ไม่พบรหัสผู้ใช้');
-      return;
-    }
-
-    setIsFetchingChannels(true);
-    try {
-      const response = await getChannels(userId);
-      setChannels(response.channels || []);
-      toast.success('โหลดข้อมูลช่องสำเร็จ');
-    } catch (error) {
-      toast.error('ไม่สามารถโหลดข้อมูลช่องได้');
-    } finally {
-      setIsFetchingChannels(false);
-    }
-  };
-
-  // เพิ่มช่องเป็นกลุ่ม
-  const handleAddGroup = async (channel: Channel) => {
-    if (!userId) {
-      toast.error('ไม่พบรหัสผู้ใช้');
-      return;
-    }
-
-    try {
-      const newGroup = await postGroupToDatabase(
-        userId,
-        channel.title,
-        channel.id
-      );
+    if (addGroupMutation.isSuccess) {
       toast.success('เพิ่มกลุ่มสำเร็จ');
-      setGroups((prevGroups) => [
-        ...prevGroups,
-        {
-          rgId: newGroup.groupId,
-          userId: parseInt(userId, 10),
-          rgName: channel.title,
-          rgTid: channel.id,
-        },
-      ]);
-    } catch (error: any) {
-      // ตรวจสอบ error.response
+      queryClient.setQueryData(
+        ['receivingGroups', userId],
+        (oldData: Group[] = []) => [
+          ...oldData,
+          {
+            rgId: addGroupMutation.data.groupId,
+            userId: parseInt(userId!, 10),
+            rgName: addGroupMutation.variables?.title,
+            rgTid: addGroupMutation.variables?.id,
+          },
+        ]
+      );
+    }
+    if (addGroupMutation.isError) {
+      const error = addGroupMutation.error as any;
       if (error.response?.data?.errorCode) {
         switch (error.response.data.errorCode) {
           case 'DUPLICATE_RG_TID':
@@ -131,6 +110,36 @@ const ResiveGroupPage = () => {
         toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
       }
     }
+  }, [addGroupMutation.isSuccess, addGroupMutation.isError]);
+
+  useEffect(() => {
+    if (deleteGroupMutation.isSuccess) {
+      toast.success('ลบกลุ่มสำเร็จ');
+      queryClient.setQueryData(
+        ['receivingGroups', userId],
+        (oldData: Group[] = []) =>
+          oldData.filter((group) => group.rgId !== selectedGroup?.rgId)
+      );
+      setIsModalOpen(false);
+      setSelectedGroup(null);
+    }
+    if (deleteGroupMutation.isError) {
+      toast.error('ไม่สามารถลบกลุ่มได้');
+    }
+  }, [deleteGroupMutation.isSuccess, deleteGroupMutation.isError]);
+
+  // Update handlers to use mutations
+  const handleAddGroup = (channel: Channel) => {
+    if (!userId) {
+      toast.error('ไม่พบรหัสผู้ใช้');
+      return;
+    }
+    addGroupMutation.mutate(channel);
+  };
+
+  const handleDeleteGroup = () => {
+    if (!selectedGroup || !userId) return;
+    deleteGroupMutation.mutate();
   };
 
   // เปิด Modal ยืนยันการลบ
@@ -145,218 +154,239 @@ const ResiveGroupPage = () => {
     setSelectedGroup(null);
   };
 
-  // ลบกลุ่ม
-  const handleDeleteGroup = async () => {
-    if (!selectedGroup || !userId) return;
-
-    try {
-      await deleteGroupFromDatabase(selectedGroup.rgId.toString(), userId);
-      toast.success('ลบกลุ่มสำเร็จ');
-      setGroups((prevGroups) =>
-        prevGroups.filter((group) => group.rgId !== selectedGroup.rgId)
-      );
-    } catch (error) {
-      toast.error('ไม่สามารถลบกลุ่มได้');
-    } finally {
-      closeDeleteModal();
-    }
-  };
-
   return (
-    <div className="max-w-6xl mx-auto mt-12 p-6">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-        จัดการกลุ่มต้นและปลายทาง
-      </h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ส่วนของช่อง */}
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-700">สแกน</h2>
-            <button
-              onClick={fetchChannels}
-              disabled={isFetchingChannels}
-              className={`py-2 px-6 rounded-lg text-white font-medium ${
-                isFetchingChannels
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {isFetchingChannels ? 'กำลังโหลด...' : 'สแกน'}
-            </button>
-          </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    รหัสช่อง
-                  </th>
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    ชื่อช่อง
-                  </th>
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    การกระทำ
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {channels.length > 0 ? (
-                  channels.map((channel, index) => (
-                    <tr
-                      key={channel.id}
-                      className={`${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      } hover:bg-gray-100`}
-                    >
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        {channel.id}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        {channel.title}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        <button
-                          onClick={() => handleAddGroup(channel)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          เพิ่ม
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-6 py-4 text-center text-gray-500 border-b"
-                    >
-                      ไม่พบข้อมูลช่อง
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <div className=" bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8">
+          จัดการกลุ่มต้นและปลายทาง
+        </h1>
 
-        {/* ส่วนของกลุ่ม */}
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-4">
-            จัดการกลุ่มปลายทาง
-          </h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    รหัสกลุ่ม
-                  </th>
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    ชื่อกลุ่ม
-                  </th>
-                  <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                    การกระทำ
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.length > 0 ? (
-                  groups.map((group, index) => (
-                    <tr
-                      key={group.rgId}
-                      className={`${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      } hover:bg-gray-100`}
-                    >
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        {group.rgTid}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        {group.rgName}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 border-b">
-                        <button
-                          onClick={() => openDeleteModal(group)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          ลบ
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-6 py-4 text-center text-gray-500 border-b"
-                    >
-                      ไม่พบข้อมูลกลุ่ม
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* ส่วนของช่อง */}
+          <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+              <h2 className="text-lg font-semibold text-gray-700">สแกน</h2>
+              <button
+                onClick={() => fetchChannels()}
+                disabled={isFetchingChannels}
+                className={`w-full sm:w-auto py-2 px-6 rounded-lg text-white font-medium transition-colors ${
+                  isFetchingChannels
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isFetchingChannels
+                  ? 'กำลังโหลด...'
+                  : channels.length > 0
+                  ? 'สแกนอีกครั้ง'
+                  : 'สแกน'}
+              </button>
+            </div>
 
-      {/* Modal ยืนยันการลบ */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={closeDeleteModal}
-          />
-          <div className="relative bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl">
-            <div className="p-8">
-              <div className="text-center mb-6">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mx-auto h-16 w-16 text-red-500"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="15" y1="9" x2="9" y2="15" />
-                  <line x1="9" y1="9" x2="15" y2="15" />
-                </svg>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-                  ยืนยันการลบ
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  คุณต้องการลบกลุ่ม{' '}
-                  <span className="font-semibold text-gray-800 dark:text-gray-100">
-                    {selectedGroup?.rgName}
-                  </span>{' '}
-                  ใช่หรือไม่? <br />
-                  การกระทำนี้ไม่สามารถย้อนกลับได้
-                </p>
+            <div className="border border-gray-200 rounded-lg">
+              <div className="max-h-[500px] overflow-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        รหัสกลุ่ม
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        ชื่อกลุ่ม
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        การกระทำ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {channels.length > 0 ? (
+                      channels.map((channel: { id: string; title: string }) => (
+                        <tr key={channel.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {channel.id}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {channel.title}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={() =>
+                                handleAddGroup({ ...channel, type: 'group' })
+                              }
+                              className="p-2 bg-green-500 hover:bg-green-600 rounded-md text-white transition-colors"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 4.5v15m7.5-7.5h-15"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-8 text-center text-gray-500"
+                        >
+                          ไม่พบข้อมูลช่อง
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
+            </div>
+          </div>
 
-              <div className="flex gap-4 mt-8">
-                <button
-                  className="flex-1 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 
-                  rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 font-medium"
-                  onClick={closeDeleteModal}
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  className="flex-1 px-4 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600
-                  rounded-2xl transition-all duration-200 font-medium"
-                  onClick={handleDeleteGroup}
-                >
-                  ลบ
-                </button>
+          {/* ส่วนของกลุ่ม */}
+          <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+              กลุ่มปลายทางที่มี
+            </h2>
+
+            <div className="border border-gray-200 rounded-lg">
+              <div className="max-h-[500px] overflow-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        รหัสกลุ่ม
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        ชื่อกลุ่ม
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        การกระทำ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {groups.length > 0 ? (
+                      groups.map((group) => (
+                        <tr key={group.rg_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {group.rg_tid}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {group.rg_name}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={() =>
+                                openDeleteModal({
+                                  rgId: group.rg_id,
+                                  userId: group.userid,
+                                  rgName: group.rg_name,
+                                  rgTid: group.rg_tid,
+                                })
+                              }
+                              className="p-2 bg-red-500 hover:bg-red-600 rounded-md text-white transition-colors"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-8 text-center text-gray-500"
+                        >
+                          ไม่พบข้อมูลกลุ่ม
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Modal ยืนยันการลบ */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/50"
+              onClick={closeDeleteModal}
+            />
+            <div className="relative bg-white dark:bg-gray-800 w-full max-w-[90%] sm:max-w-md rounded-3xl shadow-2xl">
+              <div className="p-4 sm:p-8">
+                <div className="text-center mb-6">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mx-auto h-16 w-16 text-red-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
+                    ยืนยันการลบ
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    คุณต้องการลบกลุ่ม{' '}
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">
+                      {selectedGroup?.rgName}
+                    </span>{' '}
+                    ใช่หรือไม่? <br />
+                    การกระทำนี้ไม่สามารถย้อนกลับได้
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                  <button
+                    className="w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 
+                    rounded-2xl hover:bg-gray-200 transition-all duration-200 font-medium"
+                    onClick={closeDeleteModal}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    className="w-full px-4 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600
+                    rounded-2xl transition-all duration-200 font-medium"
+                    onClick={handleDeleteGroup}
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
