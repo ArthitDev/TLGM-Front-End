@@ -235,25 +235,26 @@ const UserTelegramSettings = () => {
   const handleStopClient = async () => {
     const loadingToast = toast.loading('กำลังหยุดการทำงานของ Client...');
     try {
-      if (userProfile) {
-        await stopClient(
-          userProfile.api_id.toString(),
-          userProfile.userid.toString()
-        );
-        // Fetch updated profile after stopping client
-        const profileData = await getUserProfile();
-        setUserProfile(profileData.user);
-        setValue('telegram_auth', profileData.user.telegram_auth);
-
-        toast.dismiss(loadingToast);
-        toast.success('หยุดการทำงานของ Client สำเร็จ');
-        setIsClientStarted(false);
-        setIsAuthenticated(false);
-        setActiveApiId('');
-        setStep(0);
-      } else {
-        throw new Error('User profile data is not available');
+      if (!userProfile?.userid || !userProfile?.api_id) {
+        throw new Error('ไม่พบข้อมูล User Profile ที่จำเป็น');
       }
+
+      await stopClient(
+        userProfile.api_id.toString(),
+        userProfile.userid.toString()
+      );
+
+      // Fetch updated profile after stopping client
+      const profileData = await getUserProfile();
+      setUserProfile(profileData.user);
+      setValue('telegram_auth', profileData.user.telegram_auth);
+
+      toast.dismiss(loadingToast);
+      toast.success('หยุดการทำงานของ Client สำเร็จ');
+      setIsClientStarted(false);
+      setIsAuthenticated(false);
+      setActiveApiId('');
+      setStep(0);
     } catch (error: any) {
       toast.dismiss(loadingToast);
       toast.error(

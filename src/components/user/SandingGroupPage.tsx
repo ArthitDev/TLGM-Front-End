@@ -29,6 +29,7 @@ const SandingGroupPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<SendingGroup | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Query user profile
   const { data: profileData } = useQuery({
@@ -61,6 +62,13 @@ const SandingGroupPage = () => {
   });
 
   const channels = channelsData?.channels || [];
+
+  // Filter channels based on search term
+  const filteredChannels = channels.filter(
+    (channel: Channel) =>
+      channel.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      channel.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Add group mutation
   const addGroupMutation = useMutation({
@@ -184,8 +192,35 @@ const SandingGroupPage = () => {
               </button>
             </div>
 
+            {/* Add search box */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="ค้นหาตามรหัสหรือชื่อกลุ่ม..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+                <svg
+                  className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+
             <div className="border border-gray-200 rounded-lg">
-              <div className="max-h-[500px] overflow-auto">
+              <div className="max-h-[450px] overflow-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-gray-50">
@@ -202,7 +237,7 @@ const SandingGroupPage = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {channels.length > 0 ? (
-                      channels.map((channel: Channel) => (
+                      filteredChannels.map((channel: Channel) => (
                         <tr key={channel.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {channel.id}
@@ -352,7 +387,7 @@ const SandingGroupPage = () => {
                     <line x1="9" y1="9" x2="15" y2="15" />
                   </svg>
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-                    ยืนยันการลบ
+                    ยืนย���นการลบ
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
                     คุณต้องการลบกลุ่ม{' '}
