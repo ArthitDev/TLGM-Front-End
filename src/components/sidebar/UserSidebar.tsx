@@ -7,6 +7,7 @@ import {
   CheckBadgeIcon,
   Cog6ToothIcon,
   HomeIcon,
+  PaperAirplaneIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/router';
@@ -28,6 +29,7 @@ const navigation: NavItem[] = [
   { name: 'ยืนยัน Telegram', icon: CheckBadgeIcon, path: '/user/confirm' },
   { name: 'กลุ่มต้นทาง', icon: ArrowRightIcon, path: '/user/sandinggroup' },
   { name: 'กลุ่มปลายทาง', icon: ArrowLeftIcon, path: '/user/resivegroup' },
+  { name: 'Forward', icon: PaperAirplaneIcon, path: '/user/forward' },
 ];
 
 const UserSidebar = () => {
@@ -116,7 +118,7 @@ const UserSidebar = () => {
           )}
         </button>
 
-        {/* เพิ่มปุ่มย่อ/ขยาย sidebar สำหรับหน้าจอ desktop */}
+        {/* เพิ��มปุ่มย่อ/ขยาย sidebar สำหรับหน้าจอ desktop */}
         <button
           className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ml-2"
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -180,35 +182,35 @@ const UserSidebar = () => {
           transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           sm:translate-x-0 transition-all duration-300 ease-in-out
           bg-white dark:bg-gray-800 text-gray-700 dark:text-white 
-          h-[calc(100vh-64px)] ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col
+          ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col
           border-r border-gray-200 dark:border-gray-700
-          mt-16 sm:mt-16
-          overflow-hidden
+          mt-16 bottom-0
         `}
       >
-        {/* ปรับ Navigation Menu ให้รองรับการย่อ/ขยาย */}
-        <nav className="flex-1 py-4 overflow-auto">
-          {navigation.map((item) => (
-            <div
-              key={item.name}
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                router.push(item.path);
-              }}
-              className={`
-                flex items-center px-4 py-2 text-sm
-                ${
-                  router.pathname === item.path
-                    ? 'bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                }
-                cursor-pointer transition-colors duration-200
-              `}
-            >
-              <item.icon className="w-5 h-5 mr-3" aria-hidden="true" />
-              {!isCollapsed && item.name}
-            </div>
-          ))}
+        <nav className="h-[calc(100vh-4rem)] flex-1 py-4">
+          <div className="h-full overflow-hidden">
+            {navigation.map((item) => (
+              <div
+                key={item.name}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push(item.path);
+                }}
+                className={`
+                  flex items-center px-4 py-2 text-sm
+                  ${
+                    router.pathname === item.path
+                      ? 'bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }
+                  cursor-pointer transition-colors duration-200
+                `}
+              >
+                <item.icon className="w-5 h-5 mr-3" aria-hidden="true" />
+                {!isCollapsed && item.name}
+              </div>
+            ))}
+          </div>
         </nav>
       </div>
 
