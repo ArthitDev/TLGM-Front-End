@@ -40,6 +40,8 @@ const ForwardMessage: React.FC = () => {
     text: string;
     date: Date;
   } | null>(null);
+  const [inputValue, setInputValue] = useState<string>('1');
+  const [intervalError, setIntervalError] = useState<string>('');
 
   // 1. Initialize client
   useEffect(() => {
@@ -77,7 +79,7 @@ const ForwardMessage: React.FC = () => {
     initializeClient();
   }, []);
 
-  // 2. ตรวจสอบข��อความใหม่
+  // 2. ตรวจสอบข้อความให่
   const handleCheckMessages = async () => {
     if (!sourceGroup?.sg_tid || destinationGroups.length === 0) {
       toast.error('กรุณาเลือกกลุ่มต้นทางและปลายทาง');
@@ -110,9 +112,9 @@ const ForwardMessage: React.FC = () => {
     } catch (error) {
       setForwardingState((prev) => ({
         ...prev,
-        error: 'เกิดข้อผิดพลาดในการตรวจสอบข้อความ',
+        error: 'เกิดข้อผิดพลาดในการ���รวจสอบข้อความ',
       }));
-      toast.error('เกิดข้อผิดพลาดใน��ารตรวจสอบข้อความ');
+      toast.error('เกิดข้อผิดพลาดในการตรวจสอบข้อความ');
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +126,21 @@ const ForwardMessage: React.FC = () => {
       toast.error('กรุณาเลือกกลุ่มต้นทางและปลายทาง');
       return false;
     }
-    if (interval < 1 || interval > 60) {
-      toast.error('ระยะเวลาต้องอยู่ระหว่าง 1-60 นาที');
+
+    // ตรวจสอบว่าเป็นตัวเลขหรือไม่
+    if (!/^\d+$/.test(inputValue)) {
+      toast.error('กรุณาป้อนตัวเลขเท่านั้น');
+      return false;
+    }
+
+    // ตรวจสอบค่าตัวเลข
+    const intervalValue = Number(inputValue);
+    if (intervalValue <= 0) {
+      toast.error('ระยะเวลาต้องมากกว่า 0 นาที');
+      return false;
+    }
+    if (intervalValue > 60) {
+      toast.error('ระยะเวลาต้องไม่เกิน 60 นาที');
       return false;
     }
     return true;
@@ -151,7 +166,7 @@ const ForwardMessage: React.FC = () => {
     } catch (error) {
       setForwardingState((prev) => ({
         ...prev,
-        error: '���กิดข้อผิดพลาดในการส่งต่อข้อความ',
+        error: 'เกิดข้อผิดพลาดในการส่งต่อข้อความ',
       }));
       toast.error('เกิดข้อผิดพลาดในการส่งต่อข้อความ');
     } finally {
@@ -223,7 +238,7 @@ const ForwardMessage: React.FC = () => {
     if (forwardingState.status === 'RUNNING') {
       // ตรวจสอบครั้งแรกทันที
       checkStatus();
-      // ตั้งเวลาตรวจสอบุก 5 วินาที
+      // ตั้งเวลาตรวจสอบทุก 5 วนาท
       statusCheckInterval = window.setInterval(checkStatus, 5000);
     }
 
@@ -236,14 +251,14 @@ const ForwardMessage: React.FC = () => {
 
   // UI Components
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4 sm:py-12 sm:px-6">
-      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header Section with improved styling */}
-        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 tracking-wide pb-1">
+        <div className="text-center space-y-3 mb-12">
+          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
             Message Forwarding
           </h1>
-          <p className="text-base sm:text-lg text-gray-600 tracking-normal mb-4">
+          <p className="text-lg text-gray-600">
             จัดการการส่งต่อข้อความระหว่างกลุ่มแบบอัตโนมัติ
           </p>
         </div>
@@ -267,7 +282,7 @@ const ForwardMessage: React.FC = () => {
           {lastMessage && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <h4 className="text-sm font-medium text-gray-500 mb-2">
-                ข้อความล่าสุด
+                ข้อความ่าสุด
               </h4>
               <p className="text-gray-800">{lastMessage.text}</p>
               <p className="text-xs text-gray-500 mt-1">
@@ -284,39 +299,58 @@ const ForwardMessage: React.FC = () => {
         </div>
 
         {/* Control Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Panel: Controls */}
-          <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100">
-            <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">
+          <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 className="text-xl font-semibold mb-6 text-gray-800">
               ควบคุมการทำงาน
             </h3>
 
             {/* Interval Setting */}
-            <div className="mb-4 sm:mb-6">
+            <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 ระยะเวลาตรวจสอบ (นาที)
               </label>
               <input
-                type="number"
-                min="1"
-                max="60"
-                value={interval}
-                onChange={(e) =>
-                  setInterval(Math.max(1, Number(e.target.value)))
-                }
-                className="w-full px-3 sm:px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                type="text"
+                value={inputValue}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  setInputValue(value);
+
+                  // ตรวจสอบว่าเป็นตัวเลขหรือไม่
+                  if (!/^\d*$/.test(value)) {
+                    setIntervalError('กรุณาป้อนตัวเลขเท่านั้น');
+                    return;
+                  }
+
+                  // ตรวจสอบค่า 0
+                  if (value === '0') {
+                    setIntervalError('ระยะเวลาต้องมากกว่า 0 นาที');
+                    return;
+                  }
+
+                  // ถ้าผ่านการตรวจสอบทั้งหมด
+                  setIntervalError('');
+                  setInterval(Number(value));
+                }}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={forwardingState.status === 'RUNNING'}
+                placeholder="ระบุจำนวนนาที"
               />
+              {intervalError && (
+                <p className="mt-1 text-sm text-red-600">{intervalError}</p>
+              )}
             </div>
 
             {/* Control Buttons */}
-            <div className="flex flex-col space-y-2 sm:space-y-3">
+            <div className="flex flex-col space-y-3">
               {/* ปุ่มตรวจสอบข้อความ - แสดงในสถานะ IDLE */}
               {forwardingState.status === 'IDLE' && (
                 <button
                   onClick={handleCheckMessages}
                   disabled={isLoading}
-                  className="w-full px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   ตรวจสอบข้อความใหม่
                 </button>
@@ -326,7 +360,12 @@ const ForwardMessage: React.FC = () => {
               {forwardingState.status === 'INITIALIZED' && (
                 <button
                   onClick={handleStartForwarding}
-                  disabled={isLoading}
+                  disabled={
+                    isLoading ||
+                    !!intervalError ||
+                    !/^\d+$/.test(inputValue) ||
+                    Number(inputValue) <= 0
+                  }
                   className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   เริ่มส่งข้อความ
@@ -347,7 +386,7 @@ const ForwardMessage: React.FC = () => {
           </div>
 
           {/* Right Panel: Groups Info */}
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-6">
             {/* Source Group */}
             <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
               <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
@@ -376,7 +415,7 @@ const ForwardMessage: React.FC = () => {
                 <span className="h-2 w-2 bg-purple-500 rounded-full"></span>
                 กลุ่มปลายทาง
               </h3>
-              <div className="overflow-x-auto">
+              <div className="overflow-hidden rounded-xl border border-gray-100">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
