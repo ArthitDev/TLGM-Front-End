@@ -24,12 +24,12 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: 'หน้าหลัก', icon: HomeIcon, path: '/user' },
-  { name: 'แดชบอร์ด', icon: ChartBarIcon, path: '/user/dashboard' },
-  { name: 'ยืนยัน Telegram', icon: CheckBadgeIcon, path: '/user/confirm' },
-  { name: 'กลุ่มต้นทาง', icon: ArrowRightIcon, path: '/user/sandinggroup' },
-  { name: 'กลุ่มปลายทาง', icon: ArrowLeftIcon, path: '/user/resivegroup' },
-  { name: 'Forward', icon: PaperAirplaneIcon, path: '/user/forward' },
+  { name: 'Home', icon: HomeIcon, path: '/user' },
+  { name: 'Dashboard', icon: ChartBarIcon, path: '/user/dashboard' },
+  { name: 'Confirm Telegram', icon: CheckBadgeIcon, path: '/user/confirm' },
+  { name: 'Sanding Group', icon: ArrowRightIcon, path: '/user/sandinggroup' },
+  { name: 'Resive Group', icon: ArrowLeftIcon, path: '/user/resivegroup' },
+  { name: 'Forward Message', icon: PaperAirplaneIcon, path: '/user/forward' },
 ];
 
 const UserSidebar = () => {
@@ -156,7 +156,7 @@ const UserSidebar = () => {
                     }}
                   >
                     <Cog6ToothIcon className="w-5 h-5 mr-2" />
-                    ตั้งค่า
+                    Settings
                   </button>
                   <button
                     className="w-full flex items-center px-4 py-2 text-sm text-white dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -166,7 +166,7 @@ const UserSidebar = () => {
                     }}
                   >
                     <ArrowLeftStartOnRectangleIcon className="w-5 h-5 mr-2" />
-                    ออกจากระบบ
+                    Logout
                   </button>
                 </div>
               </div>
@@ -226,10 +226,10 @@ const UserSidebar = () => {
               <div className="text-center mb-6">
                 <ArrowLeftStartOnRectangleIcon className="mx-auto h-16 w-16 text-red-500" />
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-                  ยืนยันการออกจากระบบ
+                  Confirm Logout
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  คุณต้องการออกจากระบบใช่หรือไม่?
+                  Are you sure you want to logout?
                 </p>
               </div>
 
@@ -239,14 +239,14 @@ const UserSidebar = () => {
                   rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 font-medium"
                   onClick={() => setShowLogoutModal(false)}
                 >
-                  ยกเลิก
+                  Cancel
                 </button>
                 <button
                   className="flex-1 px-4 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600
                   rounded-2xl transition-all duration-200 font-medium"
                   onClick={confirmLogout}
                 >
-                  ยืนยัน
+                  Confirm
                 </button>
               </div>
             </div>

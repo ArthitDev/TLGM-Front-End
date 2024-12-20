@@ -23,20 +23,20 @@ const ResiveGroup: React.FC<ResiveGroupProps> = ({ groups, onDeleteGroup }) => {
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
       <h2 className="text-lg font-semibold text-gray-700 mb-4">
-        จัดการกลุ่มปลายทาง
+        Manage receiving groups
       </h2>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-100">
               <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                รหัสกลุ่ม
+                Group ID
               </th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                ชื่อกลุ่ม
+                Group Name
               </th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600 uppercase border-b">
-                การกระทำ
+                Action
               </th>
             </tr>
           </thead>
@@ -60,7 +60,7 @@ const ResiveGroup: React.FC<ResiveGroupProps> = ({ groups, onDeleteGroup }) => {
                       onClick={() => onDeleteGroup(group)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      ลบ
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -71,7 +71,7 @@ const ResiveGroup: React.FC<ResiveGroupProps> = ({ groups, onDeleteGroup }) => {
                   colSpan={3}
                   className="px-6 py-4 text-center text-gray-500 border-b"
                 >
-                  ไม่พบข้อมูลกลุ่ม
+                  No group found
                 </td>
               </tr>
             )}

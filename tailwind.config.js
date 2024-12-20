@@ -7,7 +7,12 @@ module.exports = {
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      animation: {
+        fadeIn: 'fadeIn 0.5s ease-in',
+        slideIn: 'slideIn 0.5s ease-out',
+      },
+    },
   },
   plugins: [],
 };

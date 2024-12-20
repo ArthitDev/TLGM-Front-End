@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { MdOutlineForwardToInbox } from 'react-icons/md';
 
 import { getUserProfile } from '@/services/profileService';
 import { getChannels } from '@/services/ResiveGroupService';
@@ -44,21 +45,33 @@ const SandingGroupPage = () => {
     queryKey: ['sendingGroups', userId],
     queryFn: () => getSandingGroupsFromDatabase(userId!),
     enabled: !!userId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // Query channels
+  // Query channels with localStorage caching
   const {
     data: channelsData,
     refetch: fetchChannels,
     isFetching: isFetchingChannels,
   } = useQuery({
     queryKey: ['channels', userId],
-    queryFn: () => getChannels(userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // ข้อมูลจะถือว่าเก่าหลังจาก 5 นาที
-    gcTime: 1000 * 60 * 30, // เก็บข้อมูลในแคชไว้ 30 นาที
-    refetchOnWindowFocus: false, // ไม่ต้อง refetch เมื่อ focus กลับมาที่หน้าต่าง
-    refetchOnMount: false, // ไม่ต้อง refetch เมื่อ component mount ใหม่
+    queryFn: async () => {
+      const response = await getChannels(userId!);
+      // Store channels in localStorage after successful fetch
+      localStorage.setItem(`channels-${userId}`, JSON.stringify(response));
+      return response;
+    },
+    initialData: () => {
+      // Try to load initial data from localStorage
+      const cached = localStorage.getItem(`channels-${userId}`);
+      return cached ? JSON.parse(cached) : undefined;
+    },
+    enabled: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const channels = channelsData?.channels || [];
@@ -92,13 +105,13 @@ const SandingGroupPage = () => {
   // Handler functions
   const handleAddGroup = (channel: Channel) => {
     if (!userId) {
-      toast.error('ไม่พบรหัสผู้ใช้');
+      toast.error('User not found');
       return;
     }
 
     addGroupMutation.mutate({
       title: channel.title,
-      message: 'ข้อความเริ่มต้น',
+      message: 'Start message',
       channelId: channel.id,
     });
   };
@@ -125,7 +138,7 @@ const SandingGroupPage = () => {
 
   useEffect(() => {
     if (addGroupMutation.isSuccess) {
-      toast.success('เพิ่มกลุ่มสำเร็จ');
+      toast.success('Add group success');
       // อัพเดท cache
       queryClient.setQueryData(
         ['sendingGroups', userId],
@@ -142,13 +155,13 @@ const SandingGroupPage = () => {
       );
     }
     if (addGroupMutation.isError) {
-      toast.error(addGroupMutation.error?.message || 'ไม่สามารถเพิ่มกลุ่มได้');
+      toast.error(addGroupMutation.error?.message || 'Cannot add group');
     }
   }, [addGroupMutation.isSuccess, addGroupMutation.isError]);
 
   useEffect(() => {
     if (deleteGroupMutation.isSuccess) {
-      toast.success('ลบกลุ่มสำเร็จ');
+      toast.success('Delete group success');
       queryClient.setQueryData(
         ['sendingGroups', userId],
         (oldData: SendingGroup[] = []) =>
@@ -160,21 +173,26 @@ const SandingGroupPage = () => {
       closeDeleteModal();
     }
     if (deleteGroupMutation.isError) {
-      toast.error(deleteGroupMutation.error?.message || 'ไม่สามารถลบกลุ่มได้');
+      toast.error(deleteGroupMutation.error?.message || 'Cannot delete group');
     }
   }, [deleteGroupMutation.isSuccess, deleteGroupMutation.isError]);
 
   return (
-    <div className=" bg-gray-50 p-4 sm:p-6">
+    <div className="bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8">
-          จัดการกลุ่มต้นทาง
-        </h1>
+        <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8">
+          <MdOutlineForwardToInbox className="w-8 h-8 text-blue-800" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800">
+            Manage sending groups
+          </h1>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-              <h2 className="text-lg font-semibold text-gray-700">สแกนช่อง</h2>
+              <h2 className="text-lg font-semibold text-gray-700">
+                Scan channel
+              </h2>
               <button
                 onClick={() => fetchChannels()}
                 disabled={isFetchingChannels}
@@ -185,10 +203,10 @@ const SandingGroupPage = () => {
                 }`}
               >
                 {isFetchingChannels
-                  ? 'กำลังโหลด...'
+                  ? 'Loading...'
                   : channels.length > 0
-                  ? 'สแกนอีกครั้ง'
-                  : 'สแกน'}
+                  ? 'Scan again'
+                  : 'Scan'}
               </button>
             </div>
 
@@ -197,7 +215,7 @@ const SandingGroupPage = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="ค้นหาตามรหัสหรือชื่อกลุ่ม..."
+                  placeholder="Search by group ID or name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -225,13 +243,13 @@ const SandingGroupPage = () => {
                   <thead>
                     <tr className="bg-gray-50">
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        รหัสกลุ่ม
+                        Group ID
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        ชื่อกลุ่ม
+                        Group Name
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        การกระทำ
+                        Action
                       </th>
                     </tr>
                   </thead>
@@ -274,7 +292,7 @@ const SandingGroupPage = () => {
                           colSpan={3}
                           className="px-4 py-8 text-center text-gray-500"
                         >
-                          ไม่พบข้อมูลก่อง
+                          No channel found
                         </td>
                       </tr>
                     )}
@@ -287,7 +305,7 @@ const SandingGroupPage = () => {
           {/* Section for Sending Groups */}
           <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-700 mb-4">
-              กลุ่มต้นทางที่มี
+              Sending groups
             </h2>
 
             <div className="border border-gray-200 rounded-lg">
@@ -296,16 +314,16 @@ const SandingGroupPage = () => {
                   <thead>
                     <tr className="bg-gray-50">
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        รหัสกลุ่ม
+                        Group ID
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        ชื่อกลุ่ม
+                        Group Name
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        ข้อความ
+                        Message
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        การกระทำ
+                        Action
                       </th>
                     </tr>
                   </thead>
@@ -351,7 +369,7 @@ const SandingGroupPage = () => {
                           colSpan={4}
                           className="px-4 py-8 text-center text-gray-500"
                         >
-                          ไม่พบข้อมูลกลุ่ม
+                          No group found
                         </td>
                       </tr>
                     )}
@@ -387,15 +405,15 @@ const SandingGroupPage = () => {
                     <line x1="9" y1="9" x2="15" y2="15" />
                   </svg>
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-                    ยืนย���นการลบ
+                    Confirm Delete
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    คุณต้องการลบกลุ่ม{' '}
+                    Are you sure you want to delete group{' '}
                     <span className="font-semibold text-gray-800 dark:text-gray-100">
                       {selectedGroup?.sg_name}
                     </span>{' '}
-                    ใช่หรือไม่? <br />
-                    การกระทำนี้ไม่สามารถย้อนกลับได้
+                    ? <br />
+                    This action cannot be undone
                   </p>
                 </div>
 
@@ -405,14 +423,14 @@ const SandingGroupPage = () => {
                     rounded-2xl hover:bg-gray-200 transition-all duration-200 font-medium"
                     onClick={closeDeleteModal}
                   >
-                    ยกเลิก
+                    Cancel
                   </button>
                   <button
                     className="w-full px-4 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600
                     rounded-2xl transition-all duration-200 font-medium"
                     onClick={handleDeleteGroup}
                   >
-                    ลบ
+                    Delete
                   </button>
                 </div>
               </div>

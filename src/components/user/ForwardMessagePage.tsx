@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { MdForward } from 'react-icons/md';
 
 import {
   beginForwarding,
@@ -112,7 +113,7 @@ const ForwardMessage: React.FC = () => {
     } catch (error) {
       setForwardingState((prev) => ({
         ...prev,
-        error: 'เกิดข้อผิดพลาดในการ���รวจสอบข้อความ',
+        error: 'เกิดข้อผิดพลาดในการตรวจสอบข้อความ',
       }));
       toast.error('เกิดข้อผิดพลาดในการตรวจสอบข้อความ');
     } finally {
@@ -153,6 +154,14 @@ const ForwardMessage: React.FC = () => {
     try {
       setIsLoading(true);
       const profile = await getUserProfile();
+
+      // Log values before making API call
+      console.log('Starting forward with params:', {
+        userId: profile.user.userid.toString(),
+        sourceChatId: sourceGroup?.sg_tid,
+        destinationChatIds: destinationGroups.map((group) => group.rg_tid),
+        interval,
+      });
 
       await beginForwarding({
         userId: profile.user.userid.toString(),
@@ -252,18 +261,11 @@ const ForwardMessage: React.FC = () => {
   // UI Components
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8 flex items-center justify-center gap-2">
+        <MdForward className="text-blue-600" />
+        Message Forwarding
+      </h1>
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header Section with improved styling */}
-        <div className="text-center space-y-3 mb-12">
-          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-            Message Forwarding
-          </h1>
-          <p className="text-lg text-gray-600">
-            จัดการการส่งต่อข้อความระหว่างกลุ่มแบบอัตโนมัติ
-          </p>
-        </div>
-
-        {/* Status Card with modern design */}
         <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -273,7 +275,7 @@ const ForwardMessage: React.FC = () => {
                 )}`}
               />
               <span className="font-medium text-gray-700">
-                สถานะ: {forwardingState.status}
+                Status: {forwardingState.status}
               </span>
             </div>
           </div>
@@ -282,7 +284,7 @@ const ForwardMessage: React.FC = () => {
           {lastMessage && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <h4 className="text-sm font-medium text-gray-500 mb-2">
-                ข้อความ่าสุด
+                Last Message
               </h4>
               <p className="text-gray-800">{lastMessage.text}</p>
               <p className="text-xs text-gray-500 mt-1">
@@ -303,13 +305,13 @@ const ForwardMessage: React.FC = () => {
           {/* Left Panel: Controls */}
           <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
             <h3 className="text-xl font-semibold mb-6 text-gray-800">
-              ควบคุมการทำงาน
+              Control
             </h3>
 
             {/* Interval Setting */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                ระยะเวลาตรวจสอบ (นาที)
+                Check interval (minutes)
               </label>
               <input
                 type="text"
@@ -320,13 +322,13 @@ const ForwardMessage: React.FC = () => {
 
                   // ตรวจสอบว่าเป็นตัวเลขหรือไม่
                   if (!/^\d*$/.test(value)) {
-                    setIntervalError('กรุณาป้อนตัวเลขเท่านั้น');
+                    setIntervalError('Please enter a number');
                     return;
                   }
 
                   // ตรวจสอบค่า 0
                   if (value === '0') {
-                    setIntervalError('ระยะเวลาต้องมากกว่า 0 นาที');
+                    setIntervalError('Interval must be greater than 0');
                     return;
                   }
 
@@ -336,7 +338,7 @@ const ForwardMessage: React.FC = () => {
                 }}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={forwardingState.status === 'RUNNING'}
-                placeholder="ระบุจำนวนนาที"
+                placeholder="Enter minutes"
               />
               {intervalError && (
                 <p className="mt-1 text-sm text-red-600">{intervalError}</p>
@@ -352,11 +354,11 @@ const ForwardMessage: React.FC = () => {
                   disabled={isLoading}
                   className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  ตรวจสอบข้อความใหม่
+                  Check new messages
                 </button>
               )}
 
-              {/* ปุ่มเริ่มส่งข้อความ - แสดงเมื่อตรวจสอบพบข้อความใหม่ */}
+              {/* ปุ่มเริ่มส่งข้อความ - แสดงเมื่อตรวจสอ��พบข้อความใหม่ */}
               {forwardingState.status === 'INITIALIZED' && (
                 <button
                   onClick={handleStartForwarding}
@@ -368,7 +370,7 @@ const ForwardMessage: React.FC = () => {
                   }
                   className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  เริ่มส่งข้อความ
+                  Start forwarding
                 </button>
               )}
 
@@ -379,7 +381,7 @@ const ForwardMessage: React.FC = () => {
                   disabled={isLoading}
                   className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  หยุดการทำงาน
+                  Stop forwarding
                 </button>
               )}
             </div>
@@ -390,18 +392,31 @@ const ForwardMessage: React.FC = () => {
             {/* Source Group */}
             <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
               <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-                กลุ่มต้นทาง
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-7 h-7 text-blue-700"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                  />
+                </svg>
+                Sending Group
               </h3>
               <div className="space-y-3">
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">ID กลุ่ม</p>
+                  <p className="text-sm text-gray-500">Group ID</p>
                   <p className="font-medium text-gray-800">
                     {sourceGroup?.sg_tid || '-'}
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">ชื่อกลุ่ม</p>
+                  <p className="text-sm text-gray-500">Group Name</p>
                   <p className="font-medium text-gray-800">
                     {sourceGroup?.sg_name || '-'}
                   </p>
@@ -412,18 +427,31 @@ const ForwardMessage: React.FC = () => {
             {/* Destination Groups */}
             <div className="bg-white backdrop-blur-lg bg-opacity-90 rounded-2xl p-6 shadow-lg border border-gray-100">
               <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                <span className="h-2 w-2 bg-purple-500 rounded-full"></span>
-                กลุ่มปลายทาง
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-7 h-7 text-yellow-500"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+                  />
+                </svg>
+                Receiving Group
               </h3>
               <div className="overflow-hidden rounded-xl border border-gray-100">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        ชื่อกลุ่ม
+                        Group Name
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        ID กลุ่ม
+                        Group ID
                       </th>
                     </tr>
                   </thead>

@@ -12,6 +12,7 @@ const pageTitles: { [key: string]: string } = {
   '/user/telegram-settings': 'TLGM Message | User Telegram Settings',
   '/user/sandinggroup': 'TLGM Message | Send Group',
   '/user/resivegroup': 'TLGM Message | Resive Group',
+  '/user/forward': 'TLGM Message | Forward Message',
 };
 
 export default pageTitles;
