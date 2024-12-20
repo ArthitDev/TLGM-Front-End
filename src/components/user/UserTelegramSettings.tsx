@@ -85,7 +85,7 @@ const UserTelegramSettings = () => {
   const handleStartClient = async (data: FormData) => {
     const loadingToast = toast.loading('Starting client...');
     try {
-      await startClient(data.apiId, data.apiHash);
+      await startClient(data.apiId, data.apiHash, data.userid);
       // Fetch updated profile after starting client
       const profileData = await getUserProfile();
       setUserProfile(profileData.user);
@@ -105,7 +105,11 @@ const UserTelegramSettings = () => {
   // Step 1: ส่งเบอร์โทรศัพท์
   const handleSendPhone = async (data: FormData) => {
     try {
-      const response = await sendPhone(data.apiId, data.phoneNumber);
+      const response = await sendPhone(
+        data.apiId,
+        data.phoneNumber,
+        data.userid
+      );
       setPhoneCodeHash(response.phoneCodeHash);
       setStep(2);
       toast.success('OTP sent successfully!');

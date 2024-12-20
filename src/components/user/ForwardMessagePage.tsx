@@ -173,8 +173,6 @@ const ForwardMessage: React.FC = () => {
       setForwardingState((prev) => ({ ...prev, status: 'RUNNING' }));
       toast.success('เริ่มการส่งต่อข้อความอัตโนมัติแล้ว');
     } catch (error) {
-      // Log error if API call fails
-      console.error('Forward error:', error);
       setForwardingState((prev) => ({
         ...prev,
         error: 'เกิดข้อผิดพลาดในการส่งต่อข้อความ',

@@ -2,11 +2,16 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
-export const startClient = async (apiId: string, apiHash: string) => {
+export const startClient = async (
+  apiId: string,
+  apiHash: string,
+  userid: string
+) => {
   try {
     const response = await axios.post(`${API_URL}/api/v1/start`, {
       apiId,
       apiHash,
+      userid,
     });
     if (response.status === 200) {
       return response.data;
@@ -19,10 +24,15 @@ export const startClient = async (apiId: string, apiHash: string) => {
   }
 };
 
-export const sendPhone = async (apiId: string, phoneNumber: string) => {
+export const sendPhone = async (
+  apiId: string,
+  phoneNumber: string,
+  userid: string
+) => {
   const response = await axios.post(`${API_URL}/api/v1/send-phone`, {
     apiId,
     phoneNumber,
+    userid,
   });
   return response.data;
 };
