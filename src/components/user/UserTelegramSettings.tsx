@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { FaCheck, FaPaperPlane, FaPlay, FaStop } from 'react-icons/fa';
+import {
+  FaCheck,
+  FaPaperPlane,
+  FaPlay,
+  FaStop,
+  FaTelegram,
+} from 'react-icons/fa';
 
 import { getUserProfile } from '@/services/profileService';
 import {
@@ -68,7 +74,7 @@ const UserTelegramSettings = () => {
           setActiveApiId(profileData.user.api_id.toString());
         }
       } catch (error) {
-        toast.error('ไม่สามารถดึงข้อมูล Profile ได้');
+        toast.error('Cannot fetch profile data');
       }
     };
 
@@ -77,7 +83,7 @@ const UserTelegramSettings = () => {
 
   // Step 0: เริ่มต้น Client
   const handleStartClient = async (data: FormData) => {
-    const loadingToast = toast.loading('กำลังเริ่มการทำงานของ Client...');
+    const loadingToast = toast.loading('Starting client...');
     try {
       await startClient(data.apiId, data.apiHash);
       // Fetch updated profile after starting client
@@ -86,15 +92,13 @@ const UserTelegramSettings = () => {
       setValue('telegram_auth', profileData.user.telegram_auth);
 
       toast.dismiss(loadingToast);
-      toast.success('เริ่มการทำงานของ Client สำเร็จ');
+      toast.success('Client started successfully');
       setIsClientStarted(true);
       setActiveApiId(data.apiId);
       setStep(1);
     } catch (error: any) {
       toast.dismiss(loadingToast);
-      toast.error(
-        error.response?.data?.error || 'ไม่สามารถเริ่มการทำงานของ Client ได้'
-      );
+      toast.error(error.response?.data?.error || 'Cannot start client');
     }
   };
 
@@ -154,19 +158,19 @@ const UserTelegramSettings = () => {
     if (step === 0)
       return (
         <>
-          <FaPlay className="mr-2" /> เริ่มการทำงาน
+          <FaPlay className="mr-2" /> Start
         </>
       );
     if (step === 1)
       return (
         <>
-          <FaPaperPlane className="mr-2" /> ส่ง OTP
+          <FaPaperPlane className="mr-2" /> Send OTP
         </>
       );
     if (step === 2)
       return (
         <>
-          <FaCheck className="mr-2" /> ยืนยัน OTP
+          <FaCheck className="mr-2" /> Confirm OTP
         </>
       );
     return '';
@@ -175,9 +179,9 @@ const UserTelegramSettings = () => {
   // เพิ่ม component Stepper
   const renderStepper = () => {
     const steps = [
-      { label: 'เริ่มต้น Client', icon: <FaPlay /> },
-      { label: 'ยืนยันเบอร์โทรศัพท์', icon: <FaPaperPlane /> },
-      { label: 'ยืนยัน OTP', icon: <FaCheck /> },
+      { label: 'Start Client', icon: <FaPlay /> },
+      { label: 'Confirm Phone', icon: <FaPaperPlane /> },
+      { label: 'Confirm OTP', icon: <FaCheck /> },
     ];
 
     return (
@@ -250,16 +254,14 @@ const UserTelegramSettings = () => {
       setValue('telegram_auth', profileData.user.telegram_auth);
 
       toast.dismiss(loadingToast);
-      toast.success('หยุดการทำงานของ Client สำเร็จ');
+      toast.success('Client stopped successfully');
       setIsClientStarted(false);
       setIsAuthenticated(false);
       setActiveApiId('');
       setStep(0);
     } catch (error: any) {
       toast.dismiss(loadingToast);
-      toast.error(
-        error.response?.data?.error || 'ไม่สามารถหยุดการทำงานของ Client ได้'
-      );
+      toast.error(error.response?.data?.error || 'Cannot stop client');
     }
   };
   // ... existing code ...
@@ -267,16 +269,41 @@ const UserTelegramSettings = () => {
   // Add new component to show working status
   const renderWorkingStatus = () => {
     return (
-      <div className="mb-8 p-6 bg-green-50 rounded-lg border-2 border-green-200">
-        <div className="flex items-center justify-center space-x-3 mb-4">
-          <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-          <h3 className="text-xl font-semibold text-green-700">
-            Telegram Client กำลังทำงาน
-          </h3>
+      <div className="mb-8 p-6 bg-green-50 rounded-lg border-2 border-green-200 relative overflow-hidden">
+        {/* Background pulse effect */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-green-400 opacity-5 animate-pulse"></div>
         </div>
-        <p className="text-center text-green-600">
-          API ID: {activeApiId} พร้อมใช้งาน
-        </p>
+
+        {/* Content with enhanced animations */}
+        <div className="relative z-10">
+          <div className="flex items-center justify-center space-x-4 mb-6">
+            {/* Multiple animated dots */}
+            <div className="flex space-x-2">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-3 h-3 bg-green-500 rounded-full"
+                  style={{
+                    animation: `pulse 1.5s ease-in-out ${i * 0.3}s infinite`,
+                  }}
+                />
+              ))}
+            </div>
+            <h3 className="text-xl font-semibold text-green-700">
+              Telegram Client is working
+            </h3>
+          </div>
+
+          {/* API ID display with fade-in and slide effect */}
+          <div className="flex justify-center items-center space-x-3">
+            <div className="px-4 py-2 bg-green-100 rounded-lg">
+              <p className="text-center text-green-700 font-medium">
+                API ID: <span className="font-mono">{activeApiId}</span>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -285,8 +312,9 @@ const UserTelegramSettings = () => {
     <FormProvider {...methods}>
       <div className="space-y-6">
         <div className="w-full p-6 bg-white shadow-md rounded-md">
-          <h2 className="text-3xl font-semibold text-gray-800 mb-10 text-center">
-            เริ่มการทำงานของ Telegram Client
+          <h2 className="text-3xl font-semibold text-gray-800 mb-10 text-center flex items-center justify-center gap-3">
+            <FaTelegram className="text-[#0088cc]" />
+            Start Telegram Client
           </h2>
 
           {/* แสดง working status เมื่อ telegram_auth เป็น 1 */}
@@ -427,7 +455,7 @@ const UserTelegramSettings = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    กำลังเริ่มการทำงาน....
+                    Starting....
                   </>
                 ) : (
                   getButtonLabel()
@@ -439,7 +467,7 @@ const UserTelegramSettings = () => {
                 onClick={handleStopClient}
                 className="mt-4 w-full md:w-auto md:min-w-[200px] inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
               >
-                <FaStop className="mr-2" /> หยุดการทำงาน
+                <FaStop className="mr-2" /> Stop
               </button>
             )}
           </div>

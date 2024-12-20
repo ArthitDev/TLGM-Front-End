@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { HiArchiveBoxArrowDown } from 'react-icons/hi2';
 
 import { getUserProfile } from '@/services/profileService';
 import {
@@ -29,6 +30,7 @@ const ResiveGroupPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   // Query user profile
   const { data: profileData } = useQuery({
     queryKey: ['userProfile'],
@@ -51,8 +53,18 @@ const ResiveGroupPage = () => {
     isFetching: isFetchingChannels,
   } = useQuery({
     queryKey: ['channels', userId],
-    queryFn: () => getChannels(userId!),
-    enabled: !!userId,
+    queryFn: async () => {
+      const result = await getChannels(userId!);
+      // Store channels in localStorage after successful fetch
+      localStorage.setItem(`channels_${userId}`, JSON.stringify(result));
+      return result;
+    },
+    initialData: () => {
+      // Try to load initial data from localStorage
+      const stored = localStorage.getItem(`channels_${userId}`);
+      return stored ? JSON.parse(stored) : undefined;
+    },
+    enabled: false,
     staleTime: 5 * 60 * 1000,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
@@ -76,7 +88,7 @@ const ResiveGroupPage = () => {
   // Handle mutations effects
   useEffect(() => {
     if (addGroupMutation.isSuccess) {
-      toast.success('เพิ่มกลุ่มสำเร็จ');
+      toast.success('Add group success');
       queryClient.setQueryData(
         ['receivingGroups', userId],
         (oldData: Group[] = []) => [
@@ -95,26 +107,26 @@ const ResiveGroupPage = () => {
       if (error.response?.data?.errorCode) {
         switch (error.response.data.errorCode) {
           case 'DUPLICATE_RG_TID':
-            toast.error('กลุ่มนี้มีอยู่ในระบบแล้ว');
+            toast.error('Group already exists');
             break;
           case 'CONFLICT_WITH_SENDINGGROUP':
-            toast.error('กลุ่มนี้ซ้ำกับข้อมูลในตาราง sendinggroup');
+            toast.error('Group conflict with sendinggroup');
             break;
           case 'MISSING_FIELDS':
-            toast.error('กรุณากรอกข้อมูลให้ครบถ้วน');
+            toast.error('Please fill in all fields');
             break;
           default:
-            toast.error(error.response.data.message || 'เกิดข้อผิดพลาด');
+            toast.error(error.response.data.message || 'Error');
         }
       } else {
-        toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+        toast.error('Error connecting to server');
       }
     }
   }, [addGroupMutation.isSuccess, addGroupMutation.isError]);
 
   useEffect(() => {
     if (deleteGroupMutation.isSuccess) {
-      toast.success('ลบกลุ่มสำเร็จ');
+      toast.success('Delete group success');
       queryClient.setQueryData(
         ['receivingGroups', userId],
         (oldData: Group[] = []) =>
@@ -124,14 +136,14 @@ const ResiveGroupPage = () => {
       setSelectedGroup(null);
     }
     if (deleteGroupMutation.isError) {
-      toast.error('ไม่สามารถลบกลุ่มได้');
+      toast.error('Cannot delete group');
     }
   }, [deleteGroupMutation.isSuccess, deleteGroupMutation.isError]);
 
   // Update handlers to use mutations
   const handleAddGroup = (channel: Channel) => {
     if (!userId) {
-      toast.error('ไม่พบรหัสผู้ใช้');
+      toast.error('User not found');
       return;
     }
     addGroupMutation.mutate(channel);
@@ -180,11 +192,43 @@ const ResiveGroupPage = () => {
     setSelectedChannels([]); // Clear selection after adding
   };
 
+  // Add this function to filter groups
+  const filteredGroups = groups.filter(
+    (group) =>
+      group.rg_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group.rg_tid.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Add new state for selected receiving groups
+  const [selectedReceivingGroups, setSelectedReceivingGroups] = useState<
+    number[]
+  >([]);
+
+  // Add new handlers for receiving groups selection
+  const handleSelectAllReceivingGroups = (checked: boolean) => {
+    if (checked) {
+      setSelectedReceivingGroups(filteredGroups.map((group) => group.rg_id));
+    } else {
+      setSelectedReceivingGroups([]);
+    }
+  };
+
+  const handleSelectReceivingGroup = (groupId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedReceivingGroups([...selectedReceivingGroups, groupId]);
+    } else {
+      setSelectedReceivingGroups(
+        selectedReceivingGroups.filter((id) => id !== groupId)
+      );
+    }
+  };
+
   return (
     <div className=" bg-gray-50 p-2 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-xl sm:text-3xl font-bold text-center text-gray-800 mb-4 sm:mb-8">
-          จัดการกลุ่มต้นและปลายทาง
+        <h1 className="text-xl sm:text-3xl font-bold text-center text-gray-800 mb-4 sm:mb-8 flex items-center justify-center gap-2">
+          <HiArchiveBoxArrowDown className="text-2xl sm:text-4xl text-blue-600" />
+          Manage receiving groups
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-7">
@@ -192,7 +236,7 @@ const ResiveGroupPage = () => {
           <div className="bg-white shadow-lg rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2 sm:gap-4">
               <h2 className="text-base sm:text-lg font-semibold text-gray-700">
-                สแกน
+                Scan
               </h2>
               <div className="flex gap-2 w-full sm:w-auto">
                 {selectedChannels.length > 0 && (
@@ -200,7 +244,7 @@ const ResiveGroupPage = () => {
                     onClick={handleAddSelected}
                     className="w-full sm:w-auto py-1.5 sm:py-2 px-4 sm:px-6 text-sm sm:text-base rounded-lg text-white font-medium bg-green-600 hover:bg-green-700 transition-colors"
                   >
-                    เพิ่ม ({selectedChannels.length})
+                    Add ({selectedChannels.length})
                   </button>
                 )}
                 <button
@@ -213,10 +257,10 @@ const ResiveGroupPage = () => {
                   }`}
                 >
                   {isFetchingChannels
-                    ? 'กำลังโหลด...'
+                    ? 'Loading...'
                     : channels.length > 0
-                    ? 'สแกนอีกครั้ง'
-                    : 'สแกน'}
+                    ? 'Scan again'
+                    : 'Scan'}
                 </button>
               </div>
             </div>
@@ -240,17 +284,17 @@ const ResiveGroupPage = () => {
                                 handleSelectAll(e.target.checked)
                               }
                             />
-                            <span className="ml-2">เลือกทั้งหมด</span>
+                            <span className="ml-2">Select all</span>
                           </div>
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          รหัสกลุ่ม
+                          Group ID
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          ชื่อกลุ่ม
+                          Group Name
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          การกระทำ
+                          Action
                         </th>
                       </tr>
                     </thead>
@@ -315,7 +359,7 @@ const ResiveGroupPage = () => {
                             colSpan={4}
                             className="px-4 py-8 text-center text-gray-500"
                           >
-                            ไม่พบข้อมูลช่อง
+                            No channel found
                           </td>
                         </tr>
                       )}
@@ -328,9 +372,34 @@ const ResiveGroupPage = () => {
 
           {/* ส่วนของกลุ่ม */}
           <div className="bg-white shadow-lg rounded-lg p-3 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4">
-              กลุ่มปลายทางที่มี
-            </h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-700">
+                Receiving groups
+              </h2>
+              <div className="w-full sm:w-64 relative">
+                <input
+                  type="text"
+                  placeholder="Search groups..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
 
             <div className="border border-gray-200 rounded-lg">
               <div className="max-h-[400px] sm:max-h-[500px] overflow-auto">
@@ -339,20 +408,52 @@ const ResiveGroupPage = () => {
                     <thead>
                       <tr className="bg-gray-50">
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          รหัสกลุ่ม
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              checked={
+                                filteredGroups.length > 0 &&
+                                selectedReceivingGroups.length ===
+                                  filteredGroups.length
+                              }
+                              onChange={(e) =>
+                                handleSelectAllReceivingGroups(e.target.checked)
+                              }
+                            />
+                            <span className="ml-2">Select all</span>
+                          </div>
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          ชื่อกลุ่ม
+                          Group ID
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                          การกระทำ
+                          Group Name
+                        </th>
+                        <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Action
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {groups.length > 0 ? (
-                        groups.map((group) => (
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map((group) => (
                           <tr key={group.rg_id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={selectedReceivingGroups.includes(
+                                  group.rg_id
+                                )}
+                                onChange={(e) =>
+                                  handleSelectReceivingGroup(
+                                    group.rg_id,
+                                    e.target.checked
+                                  )
+                                }
+                              />
+                            </td>
                             <td className="px-4 py-3 text-sm text-gray-700">
                               {group.rg_tid}
                             </td>
@@ -395,7 +496,9 @@ const ResiveGroupPage = () => {
                             colSpan={3}
                             className="px-4 py-8 text-center text-gray-500"
                           >
-                            ไม่พบข้อมูลกลุ่ม
+                            {groups.length > 0
+                              ? 'No matching groups found'
+                              : 'No group found'}
                           </td>
                         </tr>
                       )}
@@ -432,15 +535,15 @@ const ResiveGroupPage = () => {
                     <line x1="9" y1="9" x2="15" y2="15" />
                   </svg>
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-                    ยืนยันการลบ
+                    Confirm Delete
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    คุณต้องการลบกลุ่ม{' '}
+                    Are you sure you want to delete group{' '}
                     <span className="font-semibold text-gray-800 dark:text-gray-100">
                       {selectedGroup?.rgName}
                     </span>{' '}
-                    ใช่หรือไม่? <br />
-                    การกระทำนี้ไม่สามารถย้อนกลับได้
+                    ? <br />
+                    This action cannot be undone
                   </p>
                 </div>
 
@@ -450,14 +553,14 @@ const ResiveGroupPage = () => {
                     rounded-2xl hover:bg-gray-200 transition-all duration-200 font-medium"
                     onClick={closeDeleteModal}
                   >
-                    ยกเลิก
+                    Cancel
                   </button>
                   <button
                     className="w-full px-4 py-2.5 text-sm text-white bg-red-500 hover:bg-red-600
                     rounded-2xl transition-all duration-200 font-medium"
                     onClick={handleDeleteGroup}
                   >
-                    ลบ
+                    Delete
                   </button>
                 </div>
               </div>

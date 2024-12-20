@@ -106,3 +106,12 @@ export const beginForwarding = async (
 export const stopContinuousForward = async (userId: string): Promise<void> => {
   await axios.post(`${API_URL}/api/v1/stop-continuous-forward`, { userId });
 };
+
+export const getForwardingStatus = async (
+  userId: string
+): Promise<ForwardingStatus> => {
+  const response = await axios.post(`${API_URL}/api/v1/get-forwarding-status`, {
+    userId,
+  });
+  return response.data;
+};

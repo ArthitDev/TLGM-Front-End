@@ -63,20 +63,20 @@ const LoginForm: React.FC<LoginFormProps> = () => {
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center bg-gradient-to-r from-gray-700 to-gray-800 text-transparent bg-clip-text">
-          เข้าสู่ระบบ
+          Login
         </h2>
 
         <form className="space-y-4 sm:space-y-5" onSubmit={onSubmit}>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
-              ชื่อผู้ใช้
+              Username
             </label>
             <div className="relative">
               <input
-                {...register('username', { required: 'กรุณากรอกชื่อผู้ใช้' })}
+                {...register('username', { required: 'Username is required' })}
                 type="text"
                 className="pl-10 pr-4 py-2.5 sm:py-3 w-full rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                placeholder="กรอกชื่อผู้ใช้"
+                placeholder="Enter username"
               />
               <span className="absolute left-3 top-3.5 text-gray-400">
                 <svg
@@ -104,14 +104,14 @@ const LoginForm: React.FC<LoginFormProps> = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
-              รหัสผ่าน
+              Password
             </label>
             <div className="relative">
               <input
-                {...register('password', { required: 'กรุณากรอกรหัสผ่าน' })}
+                {...register('password', { required: 'Password is required' })}
                 type={showPassword ? 'text' : 'password'}
                 className="pl-10 pr-12 py-2.5 sm:py-3 w-full rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                placeholder="กรอกรหัสผ่าน"
+                placeholder="Enter password"
               />
               <span className="absolute left-3 top-3.5 text-gray-400">
                 <svg
@@ -207,10 +207,10 @@ const LoginForm: React.FC<LoginFormProps> = () => {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                กำลังเข้าสู่ระบบ...
+                Logging in...
               </>
             ) : (
-              'เข้าสู่ระบบ'
+              'Login'
             )}
           </button>
         </form>
