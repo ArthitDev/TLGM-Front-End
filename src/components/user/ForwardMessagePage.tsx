@@ -119,13 +119,13 @@ const ForwardMessage: React.FC = () => {
       setIsLoading(true);
       const profile = await getUserProfile();
 
-      // Log values before making API call
-      console.log('Starting forward with params:', {
-        userId: profile.user.userid.toString(),
-        sourceChatId: sourceGroup?.sg_tid,
-        destinationChatIds: destinationGroups.map((group) => group.rg_tid),
-        interval,
-      });
+      // // Log values before making API call
+      // console.log('Starting forward with params:', {
+      //   userId: profile.user.userid.toString(),
+      //   sourceChatId: sourceGroup?.sg_tid,
+      //   destinationChatIds: destinationGroups.map((group) => group.rg_tid),
+      //   interval,
+      // });
 
       await beginForwarding({
         userId: profile.user.userid.toString(),
