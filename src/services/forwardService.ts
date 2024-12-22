@@ -3,12 +3,8 @@ import axios from 'axios';
 const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
 export interface ForwardingStatus {
-  id: number;
-  status: 'READY' | 'WAITING' | 'ERROR';
-  message?: string;
-  timestamp?: string;
-  successGroups?: string[];
-  failedGroups?: string[];
+  status: number;
+  userId: string;
 }
 
 // เพิ่ม interface สำหรับ response
@@ -68,16 +64,10 @@ export const beginForwarding = async (
   data: BeginForwardingRequest
 ): Promise<void> => {
   try {
-    // ตรวจสอบข้อมูลก่อนส่ง request
-    if (!data.userId || !data.sourceChatId || !data.destinationChatIds) {
-      throw new Error('Missing required parameters');
-    }
+    // First, ensure client is initialized
+    await initializeForwarding(data.userId.toString());
 
-    // ตรวจสอบค่า interval
-    if (data.interval && (data.interval < 1 || data.interval > 60)) {
-      throw new Error('Interval must be between 1 and 60 minutes');
-    }
-
+    // Proceed with forwarding
     const response = await axios.post(`${API_URL}/api/v1/begin-forwarding`, {
       userId: data.userId,
       sourceChatId: data.sourceChatId,
