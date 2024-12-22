@@ -5,8 +5,8 @@ import { MdForward } from 'react-icons/md';
 import {
   beginForwarding,
   checkForwardingStatus,
+  getForwardingStatus,
   initializeForwarding,
-  startContinuousForward,
   stopContinuousForward,
 } from '@/services/forwardService';
 import { getUserProfile } from '@/services/profileService';
@@ -20,7 +20,7 @@ import {
 } from '@/services/SandingGroupService';
 
 interface ForwardingState {
-  status: 'IDLE' | 'INITIALIZED' | 'CHECKING' | 'RUNNING' | 'STOPPED';
+  status: 'IDLE' | 'RUNNING';
   messages: any[];
   error: string | null;
 }
@@ -52,9 +52,14 @@ const ForwardMessage: React.FC = () => {
         const profile = await getUserProfile();
         const userId = profile.user.userid.toString();
 
+        // Get initial forwarding status from DB
+        const forwardingStatus = await getForwardingStatus(userId);
+        const initialStatus =
+          forwardingStatus.status === 1 ? 'RUNNING' : 'IDLE';
+        setForwardingState((prev) => ({ ...prev, status: initialStatus }));
+
         // เริ่มต้นเชื่อมต่อ Telegram Client
         await initializeForwarding(userId);
-        setForwardingState((prev) => ({ ...prev, status: 'INITIALIZED' }));
 
         // ดึงข้อมูลกลุ่ม
         const [sendingGroups, resiveGroups] = await Promise.all([
@@ -79,47 +84,6 @@ const ForwardMessage: React.FC = () => {
 
     initializeClient();
   }, []);
-
-  // 2. ตรวจสอบข้อความให่
-  const handleCheckMessages = async () => {
-    if (!sourceGroup?.sg_tid || destinationGroups.length === 0) {
-      toast.error('กรุณาเลือกกลุ่มต้นทางและปลายทาง');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setForwardingState((prev) => ({ ...prev, status: 'CHECKING' }));
-
-      const profile = await getUserProfile();
-      const userId = profile.user.userid.toString();
-
-      const status = await startContinuousForward(
-        userId,
-        sourceGroup.sg_tid,
-        destinationGroups.map((group) => group.rg_tid)
-      );
-
-      if (status.status === 'READY') {
-        toast.success('พบข้อความใหม่ พร้อมสำหรับการส่งต่อ');
-      } else {
-        toast('ไม่พบข้อความใหม่ที่จะส่งต่อ');
-      }
-
-      setForwardingState((prev) => ({
-        ...prev,
-        status: status.status === 'READY' ? 'INITIALIZED' : 'IDLE',
-      }));
-    } catch (error) {
-      setForwardingState((prev) => ({
-        ...prev,
-        error: 'เกิดข้อผิดพลาดในการตรวจสอบข้อความ',
-      }));
-      toast.error('เกิดข้อผิดพลาดในการตรวจสอบข้อความ');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Validation
   const validateInputs = (): boolean => {
@@ -234,7 +198,7 @@ const ForwardMessage: React.FC = () => {
         );
 
         if (!status.isActive) {
-          setForwardingState((prev) => ({ ...prev, status: 'STOPPED' }));
+          setForwardingState((prev) => ({ ...prev, status: 'IDLE' }));
         }
         if (status.lastMessage) {
           setLastMessage(status.lastMessage);
@@ -347,19 +311,8 @@ const ForwardMessage: React.FC = () => {
 
             {/* Control Buttons */}
             <div className="flex flex-col space-y-3">
-              {/* ปุ่มตรวจสอบข้อความ - แสดงในสถานะ IDLE */}
+              {/* ปุ่มเริ่มส่งข้อความ - แสดงเมื่อสถานะเป็น IDLE */}
               {forwardingState.status === 'IDLE' && (
-                <button
-                  onClick={handleCheckMessages}
-                  disabled={isLoading}
-                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  Check new messages
-                </button>
-              )}
-
-              {/* ปุ่มเริ่มส่งข้อความ - แสดงเมื่อตรวจสอ��พบข้อความใหม่ */}
-              {forwardingState.status === 'INITIALIZED' && (
                 <button
                   onClick={handleStartForwarding}
                   disabled={
@@ -374,7 +327,7 @@ const ForwardMessage: React.FC = () => {
                 </button>
               )}
 
-              {/* ปุ่มหยุดการทำงาน - แสดงเมื่อกำลังส่งข้อความ */}
+              {/* ปุ่มหยุดการทำงาน - แสดงเมื่อกถานะเป็น RUNNING */}
               {forwardingState.status === 'RUNNING' && (
                 <button
                   onClick={handleStopForwarding}
