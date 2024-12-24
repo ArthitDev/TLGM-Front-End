@@ -31,7 +31,7 @@ class MyDocument extends Document {
             content="TLGM - ระบบส่งข้อความอัตโนมัติใน Telegram"
           />
           <meta property="og:url" content="https://tlgm.xyz" />
-          <meta property="og:image" content="/images/og-image.png" />
+          <meta property="og:image" content="/images/og-image.webp" />
           <meta property="og:type" content="website" />
         </Head>
         <body>
