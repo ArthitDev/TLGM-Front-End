@@ -21,15 +21,6 @@ jobs:
         with:
           node-version: '20.17.0'
 
-      # Step 3: Install dependencies (No cache)
-      - name: 🔨 Install Dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm ci --no-audit --no-fund --prefer-offline --progress=false
-        env:
-          NODE_OPTIONS: "--max_old_space_size=4096"
-          CI: true
-
       # Step 4: Create .env file from GitHub Secrets
       - name: 📄 Create .env.production file
         run: |
