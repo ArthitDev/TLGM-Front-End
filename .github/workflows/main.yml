@@ -20,21 +20,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.17.0'
-          cache: 'npm'
 
-      # Step 3: Cache dependencies with updated key
-      - name: 📁 Cache npm dependencies
-        uses: actions/cache@v3
-        id: cache-node-modules
-        with:
-          path: |
-            **/node_modules
-            .next/cache
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json', '**/package-lock.json', '**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      # Step 4: Install dependencies (Always run npm ci)
+      # Step 3: Install dependencies (No cache)
       - name: 🔨 Install Dependencies
         run: |
           echo "Installing dependencies..."
@@ -43,18 +30,18 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=4096"
           CI: true
 
-      # Step 5: Create .env file from GitHub Secrets
+      # Step 4: Create .env file from GitHub Secrets
       - name: 📄 Create .env.production file
         run: |
           echo "${{ secrets.ENV_FILE_CONTENTS }}" > .env.production
 
-      # Step 6: Build the Next.js project
+      # Step 5: Build the Next.js project
       - name: 🏗 Build Project
         run: |
           echo "Building project..."
           npm run build
 
-      # Step 7: Deploy files to the server using FTP
+      # Step 6: Deploy files to the server using FTP
       - name: 📂 Sync all folders and files to the server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
