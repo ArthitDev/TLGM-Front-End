@@ -15,6 +15,12 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
+      - name: 🔄 Clear npm cache manually
+        run: |
+            echo "Clearing npm cache..."
+            rm -rf **/node_modules .next/cache
+
+
       # Step 2: Setup Node.js 20.17.0 environment
       - name: 📦 Set up Node.js
         uses: actions/setup-node@v3
