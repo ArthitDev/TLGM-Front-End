@@ -22,7 +22,7 @@ jobs:
           node-version: '20.17.0'
           cache: 'npm'
 
-      # Step 3: Cache dependencies
+      # Step 3: Cache dependencies with updated key
       - name: 📁 Cache npm dependencies
         uses: actions/cache@v3
         id: cache-node-modules
@@ -30,18 +30,19 @@ jobs:
           path: |
             **/node_modules
             .next/cache
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json', '**/package-lock.json', '**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # Step 4: Install dependencies
+      # Step 4: Install dependencies (Always run npm ci)
       - name: 🔨 Install Dependencies
         run: |
-            echo "Installing dependencies..."
-            npm ci --no-audit --no-fund --prefer-offline --progress=false
+          echo "Installing dependencies..."
+          npm ci --no-audit --no-fund --prefer-offline --progress=false
         env:
-            NODE_OPTIONS: "--max_old_space_size=4096"
-            CI: true
+          NODE_OPTIONS: "--max_old_space_size=4096"
+          CI: true
+
       # Step 5: Create .env file from GitHub Secrets
       - name: 📄 Create .env.production file
         run: |
