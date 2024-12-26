@@ -36,14 +36,12 @@ jobs:
 
       # Step 4: Install dependencies
       - name: 🔨 Install Dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
-          echo "Installing dependencies..."
-          npm ci --no-audit --no-fund --prefer-offline --progress=false
+            echo "Installing dependencies..."
+            npm ci --no-audit --no-fund --prefer-offline --progress=false
         env:
-          NODE_OPTIONS: "--max_old_space_size=4096"
-          CI: true
-
+            NODE_OPTIONS: "--max_old_space_size=4096"
+            CI: true
       # Step 5: Create .env file from GitHub Secrets
       - name: 📄 Create .env.production file
         run: |
