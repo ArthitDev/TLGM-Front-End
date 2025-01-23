@@ -69,7 +69,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: .next/
-          server-dir: /tlgm-website.xyz/.next/
+          server-dir: /smartwoundcare.site/.next/
           dry-run: false
           exclude: |
             **/*.DS_Store
