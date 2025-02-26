@@ -80,11 +80,11 @@ export const beginForwarding = async (
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Begin forwarding failed:', {
-        status: error.response?.status,
-        message: error.response?.data?.error || error.message,
-        data: error.response?.data,
-      });
+      // console.error('Begin forwarding failed:', {
+      //   status: error.response?.status,
+      //   message: error.response?.data?.error || error.message,
+      //   data: error.response?.data,
+      // });
       throw new Error(
         error.response?.data?.error || 'Failed to begin forwarding'
       );
